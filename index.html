@@ -143,6 +143,7 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 /* ---------- Hotspots : coordonnées UV mesurées sur ta texture (u → droite, v → bas) ---------- */
 const HOTSPOTS = [
   {id:"logo",  face:"front", u:.19, v:.10, title:"Logotype BLOOM",        text:"Lettrage en relief et mention bilingue. Le plan arrive en rasant pour révéler la matière.", az:-28, el:18, dist:3.4},
+  {id:"holo",  face:"front", u:.328, v:.657, title:"Hologramme Kinegram", text:"Image diffractive : les couleurs changent selon l'angle de vue et la lumière. Fais tourner la carte pour le voir vivre.", az:-26, el:16, dist:4.2},
   {id:"data",  face:"front", u:.47, v:.52, title:"Zone de personnalisation", text:"Champs d'identité bilingues, posés sur le fond guilloché.", az:22, el:10, dist:6.0},
   {id:"flower",face:"front", u:.76, v:.62, title:"Rosace guillochée",     text:"Fleur en traits continus, typique de l'impression de sécurité.", az:30, el:-12, dist:3.6},
   {id:"window",face:"back",  u:.18, v:.18, title:"Disque optique",         text:"Cercle à effet de profondeur. Le spot passe dessus pendant l'approche.", az:-24, el:16, dist:3.2},
@@ -159,7 +160,7 @@ renderer.setClearColor(0x000000, 0);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.85;
+renderer.toneMappingExposure = 0.836;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 stage.appendChild(renderer.domElement);
 
@@ -170,11 +171,11 @@ scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 const camera = new THREE.PerspectiveCamera(30, innerWidth/innerHeight, 0.4, 80);
 
 /* Lumières : un spot principal qui balaie (comme dans ta scène Blender), un contre-jour froid, une ambiance très basse */
-scene.add(new THREE.HemisphereLight(0x9fb8cc, 0x05070a, 0.1));
-const key = new THREE.SpotLight(0xffffff, 420, 60, THREE.MathUtils.degToRad(22), 0.85, 2);
+scene.add(new THREE.HemisphereLight(0x9fb8cc, 0x05070a, 0.086));
+const key = new THREE.SpotLight(0xfffdfa, 440, 60, THREE.MathUtils.degToRad(20.2), 0.79, 2);
 key.position.set(-6, 5, 11);
 scene.add(key, key.target);
-const rim = new THREE.SpotLight(0x7fc8ff, 260, 60, THREE.MathUtils.degToRad(30), 1, 2);
+const rim = new THREE.SpotLight(0x78c2ff, 244, 60, THREE.MathUtils.degToRad(28.8), 0.96, 2);
 rim.position.set(8, -3, -10);
 scene.add(rim, rim.target);
 
@@ -200,24 +201,78 @@ function tex(url){ return new Promise(res=>loader.load(url,t=>{t.colorSpace=THRE
 
 function faceMat(map){
   return new THREE.MeshPhysicalMaterial({
-    map, roughness:.32, metalness:0,
-    clearcoat:1, clearcoatRoughness:.12,
+    map, color:0xf7f8f9, roughness:0.336, metalness:0, envMapIntensity:0.84,
+    clearcoat:0.96, clearcoatRoughness:0.132,
     iridescence:.7, iridescenceIOR:1.45, iridescenceThicknessRange:[180,620],
     specularIntensity:.6
   });
 }
 
 const card = new THREE.Group(); scene.add(card);
+/* Tranche noire tout autour */
 const edge = new THREE.Mesh(
   new THREE.ExtrudeGeometry(shape,{depth:T,bevelEnabled:false,curveSegments:24}),
-  [new THREE.MeshBasicMaterial({visible:false}), new THREE.MeshPhysicalMaterial({color:0x0a2236, roughness:.25, clearcoat:1})]
+  [new THREE.MeshBasicMaterial({visible:false}), new THREE.MeshPhysicalMaterial({color:0x050608, roughness:.3, clearcoat:1})]
 );
 edge.position.z = -T/2; card.add(edge);
 
 const [frontTex, backTex] = await Promise.all([tex("front.webp"), tex("back.webp")]);
 const frontMat = faceMat(frontTex), backMat = faceMat(backTex);
+// recto : vernis plus mat, pour qu'il ne brûle pas plus que le verso
+frontMat.clearcoat = .5; frontMat.clearcoatRoughness = .22; frontMat.roughness = .42;
+// fenêtres transparentes : le blanc de la bande de galets est découpé dans les deux textures
+for (const m of [frontMat, backMat]) { m.alphaTest = .5; m.side = THREE.DoubleSide; }
 const front = new THREE.Mesh(faceGeo(), frontMat); front.position.z = T/2; card.add(front);
 const back  = new THREE.Mesh(faceGeo(), backMat);  back.rotation.y = Math.PI; back.position.z = -T/2; card.add(back);
+
+/* ---------- Hologramme Kinegram (recto) ---------- */
+const holoTex = await new Promise(res=>loader.load("holo.png",t=>{t.colorSpace=THREE.NoColorSpace;t.anisotropy=aniso;res(t)}));
+const HU0=.169, HU1=.486, HV0=.503, HV1=.812;          // position relevée sur la maquette
+const holoMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2,
+  uniforms:{ map:{value:holoTex}, keyPos:{value:new THREE.Vector3()}, uMove:{value:0} },
+  vertexShader:`
+    varying vec2 vUv; varying vec3 vWorld; varying vec3 vN;
+    void main(){
+      vUv = uv;
+      vec4 w = modelMatrix * vec4(position,1.0);
+      vWorld = w.xyz; vN = normalize(mat3(modelMatrix) * normal);
+      gl_Position = projectionMatrix * viewMatrix * w;
+    }`,
+  fragmentShader:`
+    uniform sampler2D map; uniform vec3 keyPos; uniform float uMove;   // uMove : 0 à l'arrêt, 1 en mouvement rapide
+    varying vec2 vUv; varying vec3 vWorld; varying vec3 vN;
+    void main(){
+      vec4 tex = texture2D(map, vUv);
+      if(tex.a < .01) discard;
+      vec3 N = normalize(vN);
+      vec3 V = normalize(cameraPosition - vWorld);
+      vec3 L = normalize(keyPos - vWorld);
+      vec3 H = normalize(L + V);
+      vec2 tilt = V.xy;                                  // inclinaison de la vue sur la carte
+      float phase = vUv.x*3.2 + vUv.y*1.9 + tilt.x*2.8 + tilt.y*2.1 + 0.15*sin(vUv.y*14.0 + vUv.x*9.0);
+      vec3 rainbow = 0.5 + 0.5*cos(6.2832*(phase + vec3(0.0, 0.33, 0.67)));
+      float grating = 0.5 + 0.5*sin((vUv.x + vUv.y*0.35)*1100.0 + tilt.x*60.0);   // réseau de diffraction
+      float nh = max(dot(N,H), 0.0);
+      float flash = pow(nh, 7.0);                        // le spot qui passe allume l'hologramme
+      float spec  = pow(nh, 60.0);
+      vec3 base = tex.rgb;
+      float lum = dot(base, vec3(.299,.587,.114));
+      float sat = max(max(base.r,base.g),base.b) - min(min(base.r,base.g),base.b);
+      float irid = (0.012 + 0.13*uMove) * (1.0 - 0.6*smoothstep(0.25, 0.6, sat));
+      vec3 col = mix(base, rainbow, irid);   // les aplats francs (fleur rouge, ellipse bleue) gardent leur couleur
+      col *= 0.95 + 0.08*flash*(0.3 + uMove);
+      col += (rainbow - 0.5) * grating * (0.005 + 0.06*uMove) * (0.5 + flash);
+      col += spec * (0.06 + 0.2*uMove);
+      // traits noirs : restent sombres mais métalliques
+      col = mix(col, base*0.8 + rainbow*(0.01 + 0.08*uMove), smoothstep(0.32, 0.08, lum));
+      gl_FragColor = vec4(col, tex.a * 0.25);   // posé à 25 % sur la carte
+    }`
+});
+const holo = new THREE.Mesh(new THREE.PlaneGeometry((HU1-HU0)*W, (HV1-HV0)*H), holoMat);
+holo.position.set(((HU0+HU1)/2-.5)*W, (.5-(HV0+HV1)/2)*H, T/2 + .002);
+holo.renderOrder = 2;
+card.add(holo);
 document.getElementById("loading").classList.add("done");
 
 /* Position 3D et normale d'un hotspot */
@@ -391,7 +446,7 @@ cvs.addEventListener("wheel",e=>{
 cvs.addEventListener("dblclick",()=>document.getElementById("wide").click());
 
 /* ---------- Boucle ---------- */
-const v = new THREE.Vector3(), camDir = new THREE.Vector3();
+const v = new THREE.Vector3(), camDir = new THREE.Vector3(), prevCam = new THREE.Vector3();
 let last = performance.now();
 function frame(now){
   const dt = Math.min(.05,(now-last)/1000); last=now;
@@ -411,6 +466,12 @@ function frame(now){
     key.target.position.lerp(new THREE.Vector3(rig.tx,rig.ty,rig.tz), f);
   }
   applyRig();
+  holoMat.uniforms.keyPos.value.copy(key.position);
+  // vitesse angulaire de la caméra : l'irisation ne se révèle qu'en mouvement
+  const ang = dt>0 ? camera.position.distanceTo(prevCam)/Math.max(rig.r,.5)/dt : 0;
+  prevCam.copy(camera.position);
+  const tgt = THREE.MathUtils.clamp((ang - .06)/.7, 0, 1);
+  holoMat.uniforms.uMove.value += (tgt - holoMat.uniforms.uMove.value) * (1 - Math.exp(-dt*(tgt>holoMat.uniforms.uMove.value?8:2.5)));
   renderer.render(scene,camera);
   // marqueurs : projection écran + masquage si la face est dos à la caméra
   for(const o of markers){
