@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}</style>
+<title>Identity Card Bloom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: plein écran noir façon plateau de tournage, la carte au centre, la liste des hotspots dans un encart sous le menu en haut à droite, une fiche technique qui apparaît à droite. Thème sombre unique, choisi. */
+:root{
+  --stage:#1c273b;           /* bleu marine du site, mesuré sur la matière */
+  --stage-deep:#0f1726;
+  --ink:#e8eef2;
+  --ink-dim:#8c9aa6;
+  --line:rgba(170,200,220,.18);
+  --holo-a:#6fd3ff;
+  --holo-b:#b59cff;
+  --glass:rgba(14,22,36,.66);
+  --f-ui:"Familjen Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%;color:var(--ink);}
+body{background:var(--stage) url("fond.png") repeat;}
+body{font-family:var(--f-ui);overflow:hidden;}
+#stage{position:fixed;inset:0;}
+.halo{z-index:0}#stage{z-index:1}.vignette{z-index:2}#markers{z-index:3}header,.rail,.sheet,.loading{z-index:4}
+canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+canvas.dragging{cursor:grabbing}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 24px);font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--ink-dim);pointer-events:none;z-index:4;transition:opacity .4s;white-space:nowrap}
+.hint.off{opacity:0}
+@media (max-width:900px){.hint{display:none}}
+.halo{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 55% 50% at 50% 46%,rgba(120,160,210,.16),transparent 70%);}
+.vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 50%,rgba(8,12,22,.55) 100%);}
+
+header{position:fixed;top:calc(env(safe-area-inset-top,0px) + 20px);left:20px;right:20px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;pointer-events:none;}
+.brand{display:grid;gap:4px}
+.brand b{font-weight:600;font-size:15px;letter-spacing:.14em;text-transform:uppercase}
+.brand span{font-family:var(--f-mono);font-size:11px;color:var(--ink-dim);letter-spacing:.04em}
+.top-actions{display:flex;gap:8px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end}
+
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:border-color .2s,background .2s}
+.btn:hover{border-color:var(--holo-a)}
+.btn:focus-visible,.hs:focus-visible,.marker:focus-visible{outline:2px solid var(--holo-a);outline-offset:2px}
+.burger{width:38px;height:38px;padding:0;display:grid;place-items:center}
+.burger span{display:block;width:16px;height:1.5px;background:var(--ink);border-radius:1px;transition:transform .25s,opacity .2s;position:relative}
+.burger span::before,.burger span::after{content:"";position:absolute;left:0;width:16px;height:1.5px;background:var(--ink);border-radius:1px;transition:transform .25s}
+.burger span::before{top:-5px}.burger span::after{top:5px}
+.burger[aria-expanded="true"]{border-color:var(--holo-a)}
+.burger[aria-expanded="true"] span{background:transparent}
+.burger[aria-expanded="true"] span::before{transform:translateY(5px) rotate(45deg)}
+.burger[aria-expanded="true"] span::after{transform:translateY(-5px) rotate(-45deg)}
+.btn[aria-pressed="true"]{background:rgba(111,211,255,.16);border-color:var(--holo-a)}
+
+/* rail de hotspots */
+.rail{position:fixed;right:20px;top:calc(env(safe-area-inset-top,0px) + 72px);transform-origin:top right;transition:opacity .28s ease,transform .28s cubic-bezier(.2,.8,.2,1);display:grid;gap:2px;width:min(300px,calc(100vw - 40px));background:var(--stage) url("fond.png") repeat;border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:0 12px 32px rgba(5,9,18,.45)}
+.rail:not(.open){opacity:0;transform:translateY(-10px) scale(.97);pointer-events:none;visibility:hidden;transition:opacity .2s,transform .2s,visibility 0s .2s}
+.rail h2{font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);margin:4px 8px 6px}
+.hs{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;text-align:left;background:none;border:0;border-radius:8px;padding:8px}
+.hs:hover{background:rgba(255,255,255,.05)}
+.hs[aria-current="true"]{background:rgba(111,211,255,.12)}
+.hs i{font-style:normal;font-family:var(--f-mono);font-size:11px;color:var(--holo-a)}
+.hs span{font-size:14px}
+.hs small{font-family:var(--f-mono);font-size:10px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em}
+
+/* fiche */
+.sheet{position:fixed;right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);width:min(320px,calc(100vw - 40px));background:var(--stage) url("fond.png") repeat;border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 12px 32px rgba(5,9,18,.45);display:grid;gap:8px;transition:opacity .4s,transform .4s}
+.sheet.off{opacity:0;transform:translateY(8px);pointer-events:none}
+.sheet .eyebrow{font-family:var(--f-mono);font-size:11px;color:var(--holo-a);letter-spacing:.06em}
+.sheet h3{margin:0;font-size:20px;font-weight:600;text-wrap:balance}
+.sheet p{margin:0;font-size:14px;line-height:1.5;color:var(--ink-dim)}
+
+/* marqueurs projetés */
+#markers{position:fixed;inset:0;pointer-events:none}
+.marker{position:absolute;left:0;top:0;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:0;background:none;pointer-events:auto;transition:opacity .3s}
+.marker::before,.marker::after{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--ink);box-shadow:0 0 12px var(--holo-a)}
+.marker::after{inset:0;background:none;border:1px solid var(--holo-a);animation:pulse 2.2s ease-out infinite}
+.marker.hide{opacity:0;pointer-events:none}
+body.labels .marker b{display:block}
+.marker b{display:none;position:absolute;left:30px;top:50%;transform:translateY(-50%);white-space:nowrap;font-family:var(--f-mono);font-weight:500;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);background:var(--stage);border:1px solid var(--line);padding:3px 6px;border-radius:4px;pointer-events:none}
+@keyframes pulse{from{transform:scale(.5);opacity:1}to{transform:scale(1.4);opacity:0}}
+
+.loading{position:fixed;inset:0;display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;color:var(--ink-dim);letter-spacing:.08em;transition:opacity .6s}
+.loading.done{opacity:0;pointer-events:none}
+
+@media (max-width:640px){
+  .rail{right:12px;left:12px;width:auto;top:calc(env(safe-area-inset-top,0px) + 112px)}
+  body.labels .marker b{display:block;font-size:9px}
+  .hs{grid-template-columns:22px 1fr}
+  .hs small{display:none}
+  .sheet{right:12px;left:12px;width:auto}
+  header{left:12px;right:12px}
+}
+@media (prefers-reduced-motion:reduce){.marker::after{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="halo"></div>
+<div id="stage"></div>
+<div class="vignette"></div>
+<div id="markers"></div>
+<div class="loading" id="loading">CHARGEMENT DES TEXTURES 4K…</div>
+
+<header>
+  <div class="brand"><b>Identity Card Bloom</b><span>85,60 × 53,98 mm</span></div>
+  <div class="top-actions">
+    <button class="btn" id="tour" type="button">Lancer la visite</button>
+    <button class="btn" id="labels" type="button" aria-pressed="false">Afficher les noms</button>
+    <button class="btn" id="wide" type="button">Plan large</button>
+    <button class="btn burger" id="burger" type="button" aria-label="Liste des hotspots" aria-expanded="false" aria-controls="rail"><span></span></button>
+  </div>
+</header>
+<div class="hint" id="hint">GLISSER POUR TOURNER · MOLETTE POUR ZOOMER · ÉCHAP POUR LE PLAN LARGE</div>
+
+<nav class="rail" id="rail" aria-label="Hotspots">
+  <h2>Hotspots</h2>
+  <div id="list" style="display:contents"></div>
+</nav>
+
+<aside class="sheet off" id="sheet" aria-live="polite">
+  <div class="eyebrow" id="sEyebrow"></div>
+  <h3 id="sTitle"></h3>
+  <p id="sText"></p>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- Hotspots : coordonnées UV mesurées sur ta texture (u → droite, v → bas) ---------- */
+const HOTSPOTS = [
+  {id:"logo",  face:"front", u:.19, v:.10, title:"Logotype BLOOM",        text:"Lettrage en relief et mention bilingue. Le plan arrive en rasant pour révéler la matière.", az:-28, el:18, dist:3.4},
+  {id:"data",  face:"front", u:.47, v:.52, title:"Zone de personnalisation", text:"Champs d'identité bilingues, posés sur le fond guilloché.", az:22, el:10, dist:6.0},
+  {id:"flower",face:"front", u:.76, v:.62, title:"Rosace guillochée",     text:"Fleur en traits continus, typique de l'impression de sécurité.", az:30, el:-12, dist:3.6},
+  {id:"window",face:"back",  u:.18, v:.18, title:"Disque optique",         text:"Cercle à effet de profondeur. Le spot passe dessus pendant l'approche.", az:-24, el:16, dist:3.2},
+  {id:"bird",  face:"back",  u:.76, v:.36, title:"Colibri irisé",          text:"Élément couleur sur la fleur gravée, le seul aplat saturé du verso.", az:26, el:8, dist:3.8},
+  {id:"micro", face:"back",  u:.38, v:.555,title:"Microtexte",             text:"Ligne de texte quasi invisible à l'œil nu, lisible uniquement en gros plan.", az:-14, el:22, dist:2.0},
+];
+/* Textes provisoires : à remplacer par les vrais argumentaires. */
+
+/* ---------- Scène ---------- */
+const W = 8.56, H = 5.35, T = 0.076, R = 0.32;     // en cm, rayon de coin ID-1 ≈ 3,18 mm
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true, powerPreference:"high-performance"});
+renderer.setClearColor(0x000000, 0);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.85;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(30, innerWidth/innerHeight, 0.4, 80);
+
+/* Lumières : un spot principal qui balaie (comme dans ta scène Blender), un contre-jour froid, une ambiance très basse */
+scene.add(new THREE.HemisphereLight(0x9fb8cc, 0x05070a, 0.1));
+const key = new THREE.SpotLight(0xffffff, 420, 60, THREE.MathUtils.degToRad(22), 0.85, 2);
+key.position.set(-6, 5, 11);
+scene.add(key, key.target);
+const rim = new THREE.SpotLight(0x7fc8ff, 260, 60, THREE.MathUtils.degToRad(30), 1, 2);
+rim.position.set(8, -3, -10);
+scene.add(rim, rim.target);
+
+/* ---------- Carte ---------- */
+function roundedShape(w,h,r){
+  const s = new THREE.Shape(), x=-w/2, y=-h/2;
+  s.moveTo(x+r,y); s.lineTo(x+w-r,y); s.quadraticCurveTo(x+w,y,x+w,y+r);
+  s.lineTo(x+w,y+h-r); s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  s.lineTo(x+r,y+h); s.quadraticCurveTo(x,y+h,x,y+h-r);
+  s.lineTo(x,y+r); s.quadraticCurveTo(x,y,x+r,y);
+  return s;
+}
+const shape = roundedShape(W,H,R);
+function faceGeo(){
+  const g = new THREE.ShapeGeometry(shape, 24);
+  const p = g.attributes.position, uv = g.attributes.uv;
+  for(let i=0;i<p.count;i++) uv.setXY(i, p.getX(i)/W+.5, p.getY(i)/H+.5);
+  return g;
+}
+const loader = new THREE.TextureLoader();
+const aniso = renderer.capabilities.getMaxAnisotropy();
+function tex(url){ return new Promise(res=>loader.load(url,t=>{t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=aniso;res(t)})); }
+
+function faceMat(map){
+  return new THREE.MeshPhysicalMaterial({
+    map, roughness:.32, metalness:0,
+    clearcoat:1, clearcoatRoughness:.12,
+    iridescence:.7, iridescenceIOR:1.45, iridescenceThicknessRange:[180,620],
+    specularIntensity:.6
+  });
+}
+
+const card = new THREE.Group(); scene.add(card);
+const edge = new THREE.Mesh(
+  new THREE.ExtrudeGeometry(shape,{depth:T,bevelEnabled:false,curveSegments:24}),
+  [new THREE.MeshBasicMaterial({visible:false}), new THREE.MeshPhysicalMaterial({color:0x0a2236, roughness:.25, clearcoat:1})]
+);
+edge.position.z = -T/2; card.add(edge);
+
+const [frontTex, backTex] = await Promise.all([tex("front.webp"), tex("back.webp")]);
+const frontMat = faceMat(frontTex), backMat = faceMat(backTex);
+const front = new THREE.Mesh(faceGeo(), frontMat); front.position.z = T/2; card.add(front);
+const back  = new THREE.Mesh(faceGeo(), backMat);  back.rotation.y = Math.PI; back.position.z = -T/2; card.add(back);
+document.getElementById("loading").classList.add("done");
+
+/* Position 3D et normale d'un hotspot */
+function hsWorld(h){
+  const x = (h.u-.5)*W, y = (.5-h.v)*H;
+  return h.face==="front"
+    ? {p:new THREE.Vector3(x,y,T/2), n:new THREE.Vector3(0,0,1)}
+    : {p:new THREE.Vector3(-x,y,-T/2), n:new THREE.Vector3(0,0,-1)};
+}
+
+/* ---------- Rig caméra : cible + coordonnées sphériques (interpolées séparément = trajectoires en arc) ---------- */
+const rig = {tx:0,ty:0,tz:0, az:0, el:.18, r:19, fov:30};
+const deg = THREE.MathUtils.degToRad;
+function applyRig(){
+  const ce = Math.cos(rig.el);
+  camera.position.set(
+    rig.tx + rig.r*ce*Math.sin(rig.az),
+    rig.ty + rig.r*Math.sin(rig.el),
+    rig.tz + rig.r*ce*Math.cos(rig.az));
+  camera.fov = rig.fov; camera.updateProjectionMatrix();
+  camera.lookAt(rig.tx,rig.ty,rig.tz);
+}
+function nearestAngle(from,to){ let d=((to-from+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; return from+d; }
+
+/* plan large : orbite lente en boucle, comme ton rendu Blender */
+let mode = "idle", idleT = 0, idleBase = 0;
+function keyPose(t, az){
+  const a = az - 0.5 + Math.sin(t*.5)*.7;          // le spot balaie de part et d'autre de la caméra
+  return {x:Math.sin(a)*13, y:5+Math.sin(t*.35)*2, z:Math.cos(a)*13};
+}
+function idlePose(t){
+  return {tx:0,ty:0,tz:0, az: idleBase + t*.12, el:.16+Math.sin(t*.37)*.12, r:19+Math.sin(t*.23)*1.5, fov:30};
+}
+
+let current = null, tl = null;
+function stopTl(){ if(tl){tl.kill(); tl=null;} }
+
+function flyTo(h, {hold=0}={}){
+  stopTl(); mode="fly"; current=h.id; updateUI(h);
+  const {p} = hsWorld(h);
+  const baseAz = h.face==="front" ? 0 : Math.PI;
+  const az = nearestAngle(rig.az, baseAz + deg(h.az));
+  const el = deg(h.el);
+  const dur = reduce ? .01 : 2.8;
+  tl = gsap.timeline();
+  // 1. recul léger + décollage (respiration avant l'approche)
+  tl.to(rig,{r:Math.max(rig.r,14), el:el*.5+.25, duration:dur*.3, ease:"power2.inOut"},0);
+  // 2. arc vers l'angle du hotspot pendant que la cible glisse dessus
+  tl.to(rig,{az, duration:dur, ease:"power3.inOut"},0);
+  tl.to(rig,{tx:p.x,ty:p.y,tz:p.z, duration:dur, ease:"power3.inOut"},0);
+  tl.to(rig,{r:h.dist, el, fov:26, duration:dur*.75, ease:"power3.inOut"},dur*.25);
+  // 3. balayage du spot sur la zone pendant l'arrivée
+  const a0 = az - deg(55), a1 = az + deg(40);
+  tl.to(key.position,{x:p.x+Math.sin(a0)*10, y:p.y+6, z:p.z+Math.cos(a0)*10, duration:dur*.6, ease:"sine.inOut"},0);
+  tl.to(key.position,{x:p.x+Math.sin(a1)*9, y:p.y+3, z:p.z+Math.cos(a1)*9, duration:dur*1.2, ease:"sine.inOut"},dur*.6);
+  tl.to(key.target.position,{x:p.x,y:p.y,z:p.z,duration:dur,ease:"power3.inOut"},0);
+  // 4. dérive lente une fois arrivé (le plan continue de vivre)
+  tl.to(rig,{az:az+deg(6)*Math.sign(h.az||1), r:h.dist*.88, duration:hold||6, ease:"sine.inOut"}, dur);
+  return tl;
+}
+
+function backToWide(){
+  stopTl(); current=null; updateUI(null);
+  mode="fly";
+  idleBase = nearestAngle(idleT*.12, rig.az) - idleT*.12;   // l'orbite repart de l'angle actuel
+  const target = idlePose(idleT);
+  tl = gsap.timeline({onComplete:()=>{mode="idle";}});
+  tl.to(rig,{...target, duration:reduce?.01:2.4, ease:"power3.inOut"});
+  tl.to(key.position,{...keyPose(idleT, target.az),duration:reduce?.01:2.4,ease:"sine.inOut"},0);
+  tl.to(key.target.position,{x:0,y:0,z:0,duration:2.4,ease:"power3.inOut"},0);
+}
+
+async function tour(){
+  const btn = document.getElementById("tour");
+  if(btn.dataset.running){ delete btn.dataset.running; btn.textContent="Lancer la visite"; backToWide(); return; }
+  btn.dataset.running="1"; btn.textContent="Arrêter la visite";
+  for(const h of HOTSPOTS){
+    if(!btn.dataset.running) return;
+    await new Promise(res=>{ const t=flyTo(h,{hold:2.6}); t.eventCallback("onComplete",res); });
+  }
+  delete btn.dataset.running; btn.textContent="Lancer la visite"; backToWide();
+}
+
+/* ---------- UI ---------- */
+const list = document.getElementById("list");
+const markersEl = document.getElementById("markers");
+const markers = HOTSPOTS.map((h,i)=>{
+  const b = document.createElement("button");
+  b.className="hs"; b.type="button"; b.dataset.id=h.id;
+  b.innerHTML=`<i>${String(i+1).padStart(2,"0")}</i><span>${h.title}</span><small>${h.face==="front"?"recto":"verso"}</small>`;
+  b.onclick=()=>{ flyTo(h); toggleRail(false); }; list.appendChild(b);
+  const m = document.createElement("button");
+  m.className="marker"; m.type="button"; m.setAttribute("aria-label",h.title);
+  const lbl=document.createElement("b"); lbl.textContent=h.title; m.appendChild(lbl);
+  m.onclick=()=>flyTo(h); markersEl.appendChild(m);
+  return {h,m,...hsWorld(h)};
+});
+function updateUI(h){
+  list.querySelectorAll(".hs").forEach(b=>b.setAttribute("aria-current", h&&b.dataset.id===h.id?"true":"false"));
+  const s = document.getElementById("sheet");
+  if(!h){ s.classList.add("off"); return; }
+  const i = HOTSPOTS.indexOf(h)+1;
+  document.getElementById("sEyebrow").textContent = `${String(i).padStart(2,"0")} · ${h.face==="front"?"RECTO":"VERSO"}`;
+  document.getElementById("sTitle").textContent = h.title;
+  document.getElementById("sText").textContent = h.text;
+  s.classList.remove("off");
+}
+document.getElementById("wide").onclick = ()=>{ const b=document.getElementById("tour"); delete b.dataset.running; b.textContent="Lancer la visite"; backToWide(); };
+document.getElementById("tour").onclick = tour;
+document.getElementById("labels").onclick = e=>{
+  const on = e.currentTarget.getAttribute("aria-pressed")!=="true";
+  e.currentTarget.setAttribute("aria-pressed", on);
+  e.currentTarget.textContent = on ? "Masquer les noms" : "Afficher les noms";
+  document.body.classList.toggle("labels", on);
+};
+const rail=document.getElementById("rail"), burger=document.getElementById("burger");
+function toggleRail(open){
+  open = open ?? !rail.classList.contains("open");
+  rail.classList.toggle("open", open); burger.setAttribute("aria-expanded", open);
+}
+burger.onclick = ()=>toggleRail();
+addEventListener("pointerdown",e=>{ if(rail.classList.contains("open") && !rail.contains(e.target) && !burger.contains(e.target)) toggleRail(false); });
+addEventListener("keydown",e=>{
+  if(e.key!=="Escape") return;
+  if(rail.classList.contains("open")){ toggleRail(false); burger.focus(); return; }
+  document.getElementById("wide").click();
+});
+
+/* ---------- Manipulation libre à la souris / au doigt ---------- */
+const cvs = renderer.domElement;
+let drag = null, vel = {az:0, el:0};
+function takeControl(){
+  stopTl();
+  const b=document.getElementById("tour"); if(b.dataset.running){ delete b.dataset.running; b.textContent="Lancer la visite"; }
+  if(mode!=="manual"){ mode="manual"; }
+  document.getElementById("hint").classList.add("off");
+}
+const pointers = new Map(); let pinch0 = null;
+cvs.addEventListener("pointerdown",e=>{
+  cvs.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  takeControl(); vel={az:0,el:0};
+  drag={x:e.clientX,y:e.clientY}; cvs.classList.add("dragging");
+  if(pointers.size===2){ const [a,b]=[...pointers.values()]; pinch0={d:Math.hypot(a.x-b.x,a.y-b.y), r:rig.r}; }
+});
+cvs.addEventListener("pointermove",e=>{
+  if(!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2 && pinch0){
+    const [a,b]=[...pointers.values()];
+    rig.r = THREE.MathUtils.clamp(pinch0.r * pinch0.d / Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)), 1.2, 32);
+    return;
+  }
+  if(!drag) return;
+  const k = 0.0055 * Math.min(1, rig.r/8 + .25);      // plus fin quand on est près
+  const dAz = -(e.clientX-drag.x)*k, dEl = (e.clientY-drag.y)*k;
+  rig.az += dAz; rig.el = THREE.MathUtils.clamp(rig.el + dEl, -1.45, 1.45);
+  vel = {az:dAz, el:dEl};
+  drag={x:e.clientX,y:e.clientY};
+});
+function endPointer(e){
+  pointers.delete(e.pointerId);
+  if(pointers.size<2) pinch0=null;
+  if(pointers.size===0){ drag=null; cvs.classList.remove("dragging"); }
+}
+cvs.addEventListener("pointerup",endPointer);
+cvs.addEventListener("pointercancel",endPointer);
+cvs.addEventListener("wheel",e=>{
+  e.preventDefault(); takeControl();
+  rig.r = THREE.MathUtils.clamp(rig.r * Math.exp(e.deltaY*0.0012), 1.2, 32);
+},{passive:false});
+cvs.addEventListener("dblclick",()=>document.getElementById("wide").click());
+
+/* ---------- Boucle ---------- */
+const v = new THREE.Vector3(), camDir = new THREE.Vector3();
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(.05,(now-last)/1000); last=now;
+  if(mode==="idle" && !reduce){
+    idleT += dt;
+    Object.assign(rig, idlePose(idleT));
+    // le spot tourne lentement autour de la carte, côté caméra
+    const k = keyPose(idleT, rig.az); key.position.set(k.x,k.y,k.z);
+  } else if(mode==="manual"){
+    // inertie après le lâcher
+    if(!drag){ rig.az += vel.az; rig.el = THREE.MathUtils.clamp(rig.el+vel.el,-1.45,1.45); vel.az*=.92; vel.el*=.92; }
+    // le spot rejoint doucement la caméra, pour toujours éclairer la face regardée
+    const k = keyPose(idleT, rig.az), f = 1-Math.pow(.02,dt);
+    key.position.x += (rig.tx+k.x-key.position.x)*f;
+    key.position.y += (rig.ty+k.y-key.position.y)*f;
+    key.position.z += (rig.tz+k.z-key.position.z)*f;
+    key.target.position.lerp(new THREE.Vector3(rig.tx,rig.ty,rig.tz), f);
+  }
+  applyRig();
+  renderer.render(scene,camera);
+  // marqueurs : projection écran + masquage si la face est dos à la caméra
+  for(const o of markers){
+    camDir.copy(camera.position).sub(o.p);
+    const facing = camDir.dot(o.n) > 0;
+    v.copy(o.p).project(camera);
+    const x=(v.x*.5+.5)*innerWidth, y=(-v.y*.5+.5)*innerHeight;
+    const show = facing && v.z<1 && mode!=="fly-hide" && current!==o.h.id;
+    o.m.style.transform=`translate(${x}px,${y}px)`;
+    o.m.classList.toggle("hide", !show);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+addEventListener("resize",()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
