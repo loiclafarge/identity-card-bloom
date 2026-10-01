@@ -103,7 +103,7 @@ body.labels .marker b{display:block}
 <div id="stage"></div>
 <div class="vignette"></div>
 <div id="markers"></div>
-<div class="loading" id="loading">CHARGEMENT DES TEXTURES 4K…</div>
+<div class="loading" id="loading">CHARGEMENT…</div>
 
 <header>
   <div class="brand"><b>Identity Card Bloom</b><span>85,60 × 53,98 mm</span></div>
@@ -197,7 +197,14 @@ function faceGeo(){
 }
 const loader = new THREE.TextureLoader();
 const aniso = renderer.capabilities.getMaxAnisotropy();
-function tex(url){ return new Promise(res=>loader.load(url,t=>{t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=aniso;res(t)})); }
+// charge une image ; en cas d'échec, on continue sans bloquer la page
+const missing = [];
+function tex(url, cs=THREE.SRGBColorSpace){
+  return new Promise(res=>loader.load(url,
+    t=>{ t.colorSpace=cs; t.anisotropy=aniso; res(t); },
+    undefined,
+    ()=>{ missing.push(url); console.warn("Image introuvable :", url); res(null); }));
+}
 
 function faceMat(map){
   return new THREE.MeshPhysicalMaterial({
@@ -216,7 +223,8 @@ const edge = new THREE.Mesh(
 );
 edge.position.z = -T/2; card.add(edge);
 
-const [frontTex, backTex] = await Promise.all([tex("front.webp"), tex("back.webp")]);
+// 1er affichage rapide en 2K (~2 Mo au total), la 4K arrive ensuite en arrière-plan
+const [frontTex, backTex] = await Promise.all([tex("front_2k.webp"), tex("back_2k.webp")]);
 const frontMat = faceMat(frontTex), backMat = faceMat(backTex);
 // recto : vernis plus mat, pour qu'il ne brûle pas plus que le verso
 frontMat.clearcoat = .5; frontMat.clearcoatRoughness = .22; frontMat.roughness = .42;
@@ -231,7 +239,7 @@ const front = new THREE.Mesh(faceGeo(), frontMat); front.position.z = T/2; card.
 const back  = new THREE.Mesh(faceGeo(), backMat);  back.rotation.y = Math.PI; back.position.z = -T/2; card.add(back);
 
 /* ---------- Hologramme Kinegram (recto) ---------- */
-const holoTex = await new Promise(res=>loader.load("holo.png",t=>{t.colorSpace=THREE.NoColorSpace;t.anisotropy=aniso;res(t)}));
+const holoTex = await tex("holo.webp", THREE.NoColorSpace);
 const HU0=.169, HU1=.486, HV0=.503, HV1=.812;          // position relevée sur la maquette
 const holoMat = new THREE.ShaderMaterial({
   transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2,
@@ -278,7 +286,16 @@ const holo = new THREE.Mesh(new THREE.PlaneGeometry((HU1-HU0)*W, (HV1-HV0)*H), h
 holo.position.set(((HU0+HU1)/2-.5)*W, (.5-(HV0+HV1)/2)*H, T/2 + .002);
 holo.renderOrder = 2;
 card.add(holo);
-document.getElementById("loading").classList.add("done");
+{
+  const ld = document.getElementById("loading");
+  if(missing.length){ ld.textContent = "FICHIER INTROUVABLE : " + missing.join(", "); setTimeout(()=>ld.classList.add("done"), 4000); }
+  else ld.classList.add("done");
+}
+if(!holoTex) holo.visible = false;
+// passage en 4K en arrière-plan, sans bloquer l'affichage
+Promise.all([tex("front.webp"), tex("back.webp")]).then(([f,b])=>{
+  for(const [m,t] of [[frontMat,f],[backMat,b]]){ if(!t) continue; if(m.map) m.map.dispose(); m.map=t; m.needsUpdate=true; }
+});
 
 /* Position 3D et normale d'un hotspot */
 function hsWorld(h){
