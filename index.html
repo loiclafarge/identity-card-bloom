@@ -221,7 +221,12 @@ const frontMat = faceMat(frontTex), backMat = faceMat(backTex);
 // recto : vernis plus mat, pour qu'il ne brûle pas plus que le verso
 frontMat.clearcoat = .5; frontMat.clearcoatRoughness = .22; frontMat.roughness = .42;
 // fenêtres transparentes : le blanc de la bande de galets est découpé dans les deux textures
-for (const m of [frontMat, backMat]) { m.alphaTest = .5; m.side = THREE.DoubleSide; }
+for (const m of [frontMat, backMat]) {
+  m.alphaTest = .5; m.side = THREE.DoubleSide;
+  // impression vue par transparence (face arrière) : couleur pure, sans reflet ni volume
+  m.onBeforeCompile = sh=>{ sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>',
+    'if(!gl_FrontFacing) outgoingLight = diffuseColor.rgb * 0.9;\n#include <opaque_fragment>'); };
+}
 const front = new THREE.Mesh(faceGeo(), frontMat); front.position.z = T/2; card.add(front);
 const back  = new THREE.Mesh(faceGeo(), backMat);  back.rotation.y = Math.PI; back.position.z = -T/2; card.add(back);
 
