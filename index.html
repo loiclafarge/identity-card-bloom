@@ -1,518 +1,438 @@
-<!doctype html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}</style>
-<title>Identity Card Bloom</title>
+<title>Atelier rotative R-4C</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: plein écran noir façon plateau de tournage, la carte au centre, la liste des hotspots dans un encart sous le menu en haut à droite, une fiche technique qui apparaît à droite. Thème sombre unique, choisi. */
+/* Layout: poste de formation, vue 3D à gauche, fiche d'intervention à droite ; empilé sur mobile. Thème unique bleu marine. */
 :root{
-  --stage:#1c273b;           /* bleu marine du site, mesuré sur la matière */
-  --stage-deep:#0f1726;
-  --ink:#e8eef2;
-  --ink-dim:#8c9aa6;
-  --line:rgba(170,200,220,.18);
-  --holo-a:#6fd3ff;
-  --holo-b:#b59cff;
-  --glass:rgba(14,22,36,.66);
-  --f-ui:"Familjen Grotesk",ui-sans-serif,system-ui,sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --bg:#0a1729; --bg2:#0f2240; --panel:#0f213b; --panel2:#0c1b31; --ink:#e9eff7; --muted:#8ea3bf; --line:#22395b;
+  --accent:#ff7a2e; --accent-ink:#0a1729; --ok:#4cc38a; --err:#ff6b6b; --warn-bg:#2a1f1a;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   color-scheme:dark;
 }
-html,body{height:100%;color:var(--ink);}
-body{background:var(--stage) url("fond.png") repeat;}
-body{font-family:var(--f-ui);overflow:hidden;}
-#stage{position:fixed;inset:0;}
-.halo{z-index:0}#stage{z-index:1}.vignette{z-index:2}#markers{z-index:3}header,.rail,.sheet,.loading{z-index:4}
-canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
-canvas.dragging{cursor:grabbing}
-.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 24px);font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--ink-dim);pointer-events:none;z-index:4;transition:opacity .4s;white-space:nowrap}
-.hint.off{opacity:0}
-@media (max-width:900px){.hint{display:none}}
-.halo{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 55% 50% at 50% 46%,rgba(120,160,210,.16),transparent 70%);}
-.vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 50%,rgba(8,12,22,.55) 100%);}
-
-header{position:fixed;top:calc(env(safe-area-inset-top,0px) + 20px);left:20px;right:20px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;pointer-events:none;}
-.brand{display:grid;gap:4px}
-.brand b{font-weight:600;font-size:15px;letter-spacing:.14em;text-transform:uppercase}
-.brand span{font-family:var(--f-mono);font-size:11px;color:var(--ink-dim);letter-spacing:.04em}
-.top-actions{display:flex;gap:8px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end}
-
+html,body{height:100%}
+body{background:var(--noise),radial-gradient(120% 90% at 30% 0%,var(--bg2),var(--bg) 70%);background-color:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:16px;padding-inline:16px;padding-block:16px;height:100%;box-sizing:border-box}
+.stage{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;min-height:360px;
+  background:
+   var(--noise),
+   linear-gradient(rgba(120,170,230,.06) 1px,transparent 1px) 0 0/40px 40px,
+   linear-gradient(90deg,rgba(120,170,230,.06) 1px,transparent 1px) 0 0/40px 40px,
+   radial-gradient(80% 70% at 50% 35%,#16345c,#0b1b31 75%);
+  background-color:var(--bg)}
+.stage::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px rgba(0,0,0,.55)}
+#c{display:block;width:100%;height:100%;cursor:grab;position:relative;z-index:1}
+#c:active{cursor:grabbing}
+.tag{position:absolute;top:14px;left:16px;display:flex;flex-direction:column;gap:2px;pointer-events:none;z-index:2}
+.tag b{font-family:var(--f-display);font-size:30px;letter-spacing:.03em;font-weight:700;line-height:1}
+.tag span{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.hint{position:absolute;bottom:12px;left:16px;font-family:var(--f-mono);font-size:11px;color:var(--muted);pointer-events:none;z-index:2}
+.label{position:absolute;transform:translate(-50%,-100%);pointer-events:none;transition:opacity .25s;z-index:2}
+.label .pin{background:var(--accent);color:var(--accent-ink);font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.03em;padding:4px 10px;border-radius:3px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.label .stem{width:2px;height:28px;background:var(--accent);margin:0 auto}
+.label .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);margin:-2px auto 0;box-shadow:0 0 0 5px rgba(255,122,46,.28)}
+.viewbtn{position:absolute;top:14px;right:14px;display:flex;gap:6px;z-index:2;flex-wrap:wrap;justify-content:flex-end}
 button{font:inherit;color:inherit;cursor:pointer}
-.btn{background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:border-color .2s,background .2s}
-.btn:hover{border-color:var(--holo-a)}
-.btn:focus-visible,.hs:focus-visible,.marker:focus-visible{outline:2px solid var(--holo-a);outline-offset:2px}
-.burger{width:38px;height:38px;padding:0;display:grid;place-items:center}
-.burger span{display:block;width:16px;height:1.5px;background:var(--ink);border-radius:1px;transition:transform .25s,opacity .2s;position:relative}
-.burger span::before,.burger span::after{content:"";position:absolute;left:0;width:16px;height:1.5px;background:var(--ink);border-radius:1px;transition:transform .25s}
-.burger span::before{top:-5px}.burger span::after{top:5px}
-.burger[aria-expanded="true"]{border-color:var(--holo-a)}
-.burger[aria-expanded="true"] span{background:transparent}
-.burger[aria-expanded="true"] span::before{transform:translateY(5px) rotate(45deg)}
-.burger[aria-expanded="true"] span::after{transform:translateY(-5px) rotate(-45deg)}
-.btn[aria-pressed="true"]{background:rgba(111,211,255,.16);border-color:var(--holo-a)}
+.ghost{background:rgba(15,33,59,.85);border:1px solid var(--line);border-radius:4px;padding:6px 10px;font-size:13px}
+.ghost:hover{border-color:var(--muted)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* rail de hotspots */
-.rail{position:fixed;right:20px;top:calc(env(safe-area-inset-top,0px) + 72px);transform-origin:top right;transition:opacity .28s ease,transform .28s cubic-bezier(.2,.8,.2,1);display:grid;gap:2px;width:min(300px,calc(100vw - 40px));background:var(--stage) url("fond.png") repeat;border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:0 12px 32px rgba(5,9,18,.45)}
-.rail:not(.open){opacity:0;transform:translateY(-10px) scale(.97);pointer-events:none;visibility:hidden;transition:opacity .2s,transform .2s,visibility 0s .2s}
-.rail h2{font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);margin:4px 8px 6px}
-.hs{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;text-align:left;background:none;border:0;border-radius:8px;padding:8px}
-.hs:hover{background:rgba(255,255,255,.05)}
-.hs[aria-current="true"]{background:rgba(111,211,255,.12)}
-.hs i{font-style:normal;font-family:var(--f-mono);font-size:11px;color:var(--holo-a)}
-.hs span{font-size:14px}
-.hs small{font-family:var(--f-mono);font-size:10px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em}
+.sheet{background:var(--noise),var(--panel);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;min-height:0;overflow:auto}
+.head{padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.head h1{font-family:var(--f-display);font-weight:700;font-size:28px;line-height:1.05;margin:0;text-wrap:balance}
+.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+.cur{padding:16px 18px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line)}
+.cur .num{font-family:var(--f-mono);font-size:12px;color:var(--accent);font-weight:500}
+.cur h2{font-family:var(--f-display);font-size:25px;font-weight:600;margin:0;line-height:1.1;text-wrap:balance}
+.cur p{margin:0;max-width:62ch;color:var(--ink)}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin:0}
+.meta dt{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding-top:2px}
+.meta dd{margin:0}
+.encart{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.encart h3{margin:0;font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.encart ol{margin:0;padding:0;list-style:none;counter-reset:a;display:flex;flex-direction:column;gap:7px}
+.encart li{counter-increment:a;display:grid;grid-template-columns:26px 1fr;gap:8px;font-size:14px;line-height:1.45}
+.encart li::before{content:counter(a,decimal-leading-zero);font-family:var(--f-mono);font-size:11px;color:var(--accent);padding-top:3px;font-variant-numeric:tabular-nums}
+.safety{background:var(--warn-bg);border-left:3px solid var(--accent);padding:8px 12px;font-size:13px;border-radius:0 4px 4px 0}
+.safety strong{font-family:var(--f-display);letter-spacing:.04em;font-size:14px;text-transform:uppercase;color:var(--accent)}
+.nav{display:flex;gap:8px;flex-wrap:wrap}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:4px;padding:9px 16px;font-weight:600}
+.primary:disabled,.ghost:disabled{opacity:.4;cursor:default}
+ol.steps{list-style:none;margin:0;padding:8px 0}
+ol.steps li button{display:grid;grid-template-columns:28px 1fr 18px;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:8px 18px;font-size:14px}
+ol.steps li button:hover{background:rgba(142,163,191,.1)}
+ol.steps .n{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+ol.steps li.on button{background:rgba(255,122,46,.12)}
+ol.steps li.on .n{color:var(--accent);font-weight:500}
+ol.steps .chk{font-size:13px;color:var(--ok);text-align:right}
+ol.steps li.quizrow .n{color:var(--accent)}
+.foot{padding:10px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);margin-top:auto}
 
-/* fiche */
-.sheet{position:fixed;right:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);width:min(320px,calc(100vw - 40px));background:var(--stage) url("fond.png") repeat;border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 12px 32px rgba(5,9,18,.45);display:grid;gap:8px;transition:opacity .4s,transform .4s}
-.sheet.off{opacity:0;transform:translateY(8px);pointer-events:none}
-.sheet .eyebrow{font-family:var(--f-mono);font-size:11px;color:var(--holo-a);letter-spacing:.06em}
-.sheet h3{margin:0;font-size:20px;font-weight:600;text-wrap:balance}
-.sheet p{margin:0;font-size:14px;line-height:1.5;color:var(--ink-dim)}
+/* quiz */
+.q{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.choices{display:flex;flex-direction:column;gap:8px}
+.choice{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:10px 12px;font-size:14px}
+.choice:hover:not(:disabled){border-color:var(--muted)}
+.choice .k{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding-top:1px}
+.choice.good{border-color:var(--ok);background:rgba(76,195,138,.12)}
+.choice.bad{border-color:var(--err);background:rgba(255,107,107,.1)}
+.choice:disabled{cursor:default}
+.fb{font-size:14px;border-left:3px solid var(--ok);padding:6px 12px;background:var(--panel2);border-radius:0 4px 4px 0}
+.fb.no{border-color:var(--err)}
+.fb b{font-family:var(--f-display);font-size:16px;letter-spacing:.03em}
+.score{display:flex;align-items:baseline;gap:10px}
+.score b{font-family:var(--f-display);font-size:64px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.score span{color:var(--muted);font-family:var(--f-mono);font-size:13px}
+.dots{display:flex;gap:6px}
+.dots i{width:22px;height:4px;border-radius:2px;background:var(--line)}
+.dots i.g{background:var(--ok)}.dots i.b{background:var(--err)}.dots i.c{background:var(--accent)}
 
-/* marqueurs projetés */
-#markers{position:fixed;inset:0;pointer-events:none}
-.marker{position:absolute;left:0;top:0;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:0;background:none;pointer-events:auto;transition:opacity .3s}
-.marker::before,.marker::after{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--ink);box-shadow:0 0 12px var(--holo-a)}
-.marker::after{inset:0;background:none;border:1px solid var(--holo-a);animation:pulse 2.2s ease-out infinite}
-.marker.hide{opacity:0;pointer-events:none}
-body.labels .marker b{display:block}
-.marker b{display:none;position:absolute;left:30px;top:50%;transform:translateY(-50%);white-space:nowrap;font-family:var(--f-mono);font-weight:500;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);background:var(--stage);border:1px solid var(--line);padding:3px 6px;border-radius:4px;pointer-events:none}
-@keyframes pulse{from{transform:scale(.5);opacity:1}to{transform:scale(1.4);opacity:0}}
-
-.loading{position:fixed;inset:0;display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;color:var(--ink-dim);letter-spacing:.08em;transition:opacity .6s}
-.loading.done{opacity:0;pointer-events:none}
-
-@media (max-width:640px){
-  .rail{right:12px;left:12px;width:auto;top:calc(env(safe-area-inset-top,0px) + 112px)}
-  body.labels .marker b{display:block;font-size:9px}
-  .hs{grid-template-columns:22px 1fr}
-  .hs small{display:none}
-  .sheet{right:12px;left:12px;width:auto}
-  header{left:12px;right:12px}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;height:auto}
+  .stage{height:60vh;min-height:320px}
+  .sheet{overflow:visible}
 }
-@media (prefers-reduced-motion:reduce){.marker::after{animation:none}}
+@media (prefers-reduced-motion:reduce){.bar i,.label{transition:none}}
 </style>
-</head>
-<body>
+<div class="wrap">
+  <section class="stage" aria-label="Vue 3D de la rotative">
+    <canvas id="c"></canvas>
+    <div class="tag"><b>R-4C</b><span>Rotative offset 4 couleurs · dérouleur à collage automatique · modèle de démonstration</span></div>
+    <div class="viewbtn">
+      <button class="ghost" id="tour">▶ Visite guidée</button>
+      <button class="ghost" id="reset">Recadrer</button>
+    </div>
+    <div class="label" id="label"><div class="pin" id="labelTxt"></div><div class="stem"></div><div class="dot"></div></div>
+    <div class="hint">Glisser pour tourner · molette pour zoomer · ← → pour les étapes</div>
+  </section>
 
-<div class="halo"></div>
-<div id="stage"></div>
-<div class="vignette"></div>
-<div id="markers"></div>
-<div class="loading" id="loading">CHARGEMENT…</div>
+  <aside class="sheet">
+    <div class="head">
+      <span class="eyebrow" id="eyebrow">Fiche de poste · Conducteur dérouleur</span>
+      <h1>Recharge d'une bobine papier</h1>
+      <div class="bar"><i id="bar"></i></div>
+    </div>
 
-<header>
-  <div class="brand"><b>Identity Card Bloom</b><span>85,60 × 53,98 mm</span></div>
-  <div class="top-actions">
-    <button class="btn" id="tour" type="button">Lancer la visite</button>
-    <button class="btn" id="labels" type="button" aria-pressed="false">Afficher les noms</button>
-    <button class="btn" id="wide" type="button">Plan large</button>
-    <button class="btn burger" id="burger" type="button" aria-label="Liste des hotspots" aria-expanded="false" aria-controls="rail"><span></span></button>
-  </div>
-</header>
-<div class="hint" id="hint">GLISSER POUR TOURNER · MOLETTE POUR ZOOMER · ÉCHAP POUR LE PLAN LARGE</div>
+    <div id="procView">
+      <div class="cur" aria-live="polite">
+        <span class="num" id="num"></span>
+        <h2 id="title"></h2>
+        <p id="text"></p>
+        <dl class="meta">
+          <dt>Matériel</dt><dd id="tools"></dd>
+          <dt>Durée</dt><dd id="time"></dd>
+        </dl>
+        <div class="encart">
+          <h3>Actions détaillées</h3>
+          <ol id="detail"></ol>
+        </div>
+        <div class="safety" id="safety" hidden><strong>Sécurité</strong><br><span id="safetyTxt"></span></div>
+        <div class="nav">
+          <button class="ghost" id="prev">← Précédent</button>
+          <button class="primary" id="next">Étape validée →</button>
+        </div>
+      </div>
+      <ol class="steps" id="steps"></ol>
+    </div>
 
-<nav class="rail" id="rail" aria-label="Hotspots">
-  <h2>Hotspots</h2>
-  <div id="list" style="display:contents"></div>
-</nav>
+    <div id="quizView" hidden>
+      <div class="q" aria-live="polite" id="quizBody"></div>
+    </div>
 
-<aside class="sheet off" id="sheet" aria-live="polite">
-  <div class="eyebrow" id="sEyebrow"></div>
-  <h3 id="sTitle"></h3>
-  <p id="sText"></p>
-</aside>
+    <div class="foot">Exemple de démonstration sur une rotative fictive. Ne remplace pas les consignes du constructeur ni le règlement de l'atelier.</div>
+  </aside>
+</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script type="importmap">
-{"imports":{
-  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-}}
-</script>
-<script type="module">
-import * as THREE from "three";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-
-const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-/* ---------- Hotspots : coordonnées UV mesurées sur ta texture (u → droite, v → bas) ---------- */
-const HOTSPOTS = [
-  {id:"logo",  face:"front", u:.19, v:.10, title:"Logotype BLOOM",        text:"Lettrage en relief et mention bilingue. Le plan arrive en rasant pour révéler la matière.", az:-28, el:18, dist:3.4},
-  {id:"holo",  face:"front", u:.328, v:.657, title:"Hologramme Kinegram", text:"Image diffractive : les couleurs changent selon l'angle de vue et la lumière. Fais tourner la carte pour le voir vivre.", az:-26, el:16, dist:4.2},
-  {id:"data",  face:"front", u:.47, v:.52, title:"Zone de personnalisation", text:"Champs d'identité bilingues, posés sur le fond guilloché.", az:22, el:10, dist:6.0},
-  {id:"flower",face:"front", u:.76, v:.62, title:"Rosace guillochée",     text:"Fleur en traits continus, typique de l'impression de sécurité.", az:30, el:-12, dist:3.6},
-  {id:"window",face:"back",  u:.18, v:.18, title:"Disque optique",         text:"Cercle à effet de profondeur. Le spot passe dessus pendant l'approche.", az:-24, el:16, dist:3.2},
-  {id:"bird",  face:"back",  u:.76, v:.36, title:"Colibri irisé",          text:"Élément couleur sur la fleur gravée, le seul aplat saturé du verso.", az:26, el:8, dist:3.8},
-  {id:"micro", face:"back",  u:.38, v:.555,title:"Microtexte",             text:"Ligne de texte quasi invisible à l'œil nu, lisible uniquement en gros plan.", az:-14, el:22, dist:2.0},
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/SSAOShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/math/SimplexNoise.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
+<script>
+const STEPS=[
+ {t:"Vue d'ensemble",x:"La bande papier se déroule depuis la bobine active, en haut du dérouleur, vers les quatre groupes d'impression (cyan, magenta, jaune, noir). La bobine arrive en fin de diamètre : il faut préparer la suivante sans arrêter la machine.",tools:"Aucun",time:"2 min",focus:"unit",label:"4 groupes CMJN",hi:[],cam:[6,5,11.5],
+  d:["Repérer la bobine active et son diamètre restant à l'écran du pupitre.","Identifier la bobine suivante prévue par l'ordre de fabrication.","Vérifier que la zone de chargement du dérouleur est dégagée."]},
+ {t:"Contrôler la bobine neuve",x:"Vérifier que la bobine correspond à l'ordre de fabrication et qu'elle n'a pas été abîmée au transport.",tools:"Ordre de fabrication, étiquette bobine",time:"3 min",focus:"newreel",label:"Bobine neuve",hi:["newreel","wrap"],cam:[1.5,2.2,6.5],
+  d:["Comparer l'étiquette (référence, grammage, laize) avec l'ordre de fabrication.","Contrôler l'emballage : chocs, écrasement, traces d'humidité.","Vérifier l'état du mandrin carton aux deux extrémités.","Signaler toute bobine non conforme au chef d'équipe, sans la charger."]},
+ {t:"Déballer et préparer",x:"Retirer l'emballage et les premières spires, souvent marquées ou humides.",tools:"Cutter de sécurité, gants anti-coupure",time:"5 min",focus:"newreel",label:"Bobine déballée",hi:["newreel"],safe:"Couper vers l'extérieur, jamais vers soi. Gants anti-coupure obligatoires.",cam:[1.2,2,6],
+  d:["Couper le feuillard et retirer l'emballage et les flasques de protection.","Éliminer les premières spires abîmées jusqu'à trouver un papier sain.","Évacuer les déchets dans le bac de recyclage papier.","Repérer le sens de déroulement indiqué sur la bobine."]},
+ {t:"Amener la bobine au dérouleur",x:"Positionner la bobine sur son chariot, dans l'axe des bras du dérouleur.",tools:"Chariot porte-bobine",time:"3 min",focus:"newreel",label:"Bobine en position",hi:["newreel","cart"],safe:"Bobine de plusieurs centaines de kilos. Rester à côté, jamais devant le chariot.",cam:[-0.5,2.5,6.5],
+  d:["Pousser le chariot lentement jusqu'aux butées du dérouleur.","Centrer la bobine sur la laize de la machine.","Orienter la bobine dans le bon sens de déroulement."]},
+ {t:"Mandriner et lever",x:"Engager les cônes dans le mandrin, serrer, puis lever la bobine en position d'attente.",tools:"Commande des bras",time:"3 min",focus:"arms",label:"Cônes et bras",hi:["arms","newreel"],safe:"Mains hors de la zone des cônes. Personne sous la bobine pendant le levage.",cam:[-1,2.8,6]},
+ {t:"Préparer le collage",x:"Poser l'adhésif de collage sur la tête de la bobine neuve et le détecteur de collage.",tools:"Adhésif double face, ruban de rupture, pastille réfléchissante",time:"5 min",focus:"tape",label:"Préparation du collage",hi:["tape"],cam:[-1.8,2.8,4.5],
+  d:["Tendre la première spire et la couper proprement selon le gabarit.","Poser l'adhésif double face en forme de V ou de W sur toute la laize.","Fixer la tête de bande avec les languettes de rupture.","Coller la pastille réfléchissante qui déclenche le collage.","Retirer les protections de l'adhésif en dernier."]},
+ {t:"Armer le collage au pupitre",x:"Renseigner la bobine au pupitre et armer le collage. La bobine neuve est mise en rotation à la vitesse de la bande.",tools:"Pupitre du dérouleur",time:"2 min",focus:"console",label:"Pupitre dérouleur",hi:["console"],safe:"Bobine neuve en rotation : ne plus approcher du dérouleur.",cam:[0.8,2.4,6.5],
+  d:["Saisir la référence et le diamètre de la bobine neuve.","Vérifier le diamètre de collage prévu sur la bobine active.","Armer le cycle de collage automatique.","Contrôler à l'écran que la bobine neuve est synchronisée."]},
+ {t:"Collage et coupe",x:"Au diamètre prévu, la bande en défilement est plaquée sur l'adhésif, puis l'ancienne bande est coupée.",tools:"Aucun (cycle automatique)",time:"Quelques secondes",focus:"newreel",label:"Nouvelle bande engagée",hi:["newreel","newweb"],cam:[-0.5,3.2,7.5],
+  d:["Observer le collage sans intervenir.","Vérifier à l'écran la confirmation de collage réussi.","Surveiller la tension de bande dans les secondes qui suivent."]},
+ {t:"Évacuer et contrôler",x:"Freiner et dégager l'ancien mandrin, puis contrôler le passage du collage dans la machine.",tools:"Chariot, fiche de production",time:"5 min",focus:"oldreel",label:"Mandrin vide",hi:["oldreel"],cam:[-0.5,2.5,7],
+  d:["Attendre l'arrêt complet du mandrin vide avant de le dégager.","Évacuer le mandrin et le reste de papier.","Repérer la feuille contenant le collage en sortie et l'écarter de la production.","Noter le changement de bobine et la gâche sur la fiche de production."]}
 ];
-/* Textes provisoires : à remplacer par les vrais argumentaires. */
+STEPS[4].d=["Abaisser les bras à hauteur du mandrin.","Engager les cônes des deux côtés et serrer.","Retirer le chariot.","Lever la bobine jusqu'à la position d'attente."];
 
-/* ---------- Scène ---------- */
-const W = 8.56, H = 5.35, T = 0.076, R = 0.32;     // en cm, rayon de coin ID-1 ≈ 3,18 mm
-const stage = document.getElementById("stage");
-const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true, powerPreference:"high-performance"});
-renderer.setClearColor(0x000000, 0);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.836;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-stage.appendChild(renderer.domElement);
+const QUIZ=[
+ {q:"Avant de déballer une bobine, que vérifie-t-on en premier ?",c:["Sa température","Qu'elle correspond à l'ordre de fabrication (référence, grammage, laize)","La couleur du mandrin","Le nombre de spires"],a:1,why:"Une bobine non conforme chargée par erreur, c'est une production entière à refaire.",state:1,hi:["newreel"],focus:"newreel",label:"Bobine neuve",cam:[1.5,2.2,6.5]},
+ {q:"Pourquoi retire-t-on les premières spires ?",c:["Pour réduire le poids de la bobine","Parce qu'elles sont souvent marquées ou humides et risquent de casser la bande","Pour faire apparaître l'étiquette","Pour régler la laize"],a:1,why:"Un papier abîmé en tête de bobine est une cause classique de casse au collage.",state:2,hi:["newreel"],focus:"newreel",label:"Bobine déballée",cam:[1.2,2,6]},
+ {q:"Pendant le levage de la bobine :",c:["On guide la bobine à la main","On peut passer dessous si c'est rapide","Personne sous la bobine, mains hors de la zone des cônes","On desserre les cônes pour la centrer"],a:2,why:"Une bobine pèse plusieurs centaines de kilos. Le risque d'écrasement est majeur.",state:4,hi:["arms"],focus:"arms",label:"Cônes et bras",cam:[-1,2.8,6]},
+ {q:"À quoi sert l'adhésif posé en V ou en W ?",c:["À fermer la bobine pour le stockage","À coller la bande neuve sur la bande en défilement au moment du collage","À protéger le mandrin","À indiquer le sens de déroulement"],a:1,why:"La forme en pointe permet à la bande de s'engager progressivement, sans à-coup de tension.",state:5,hi:["tape"],focus:"tape",label:"Collage",cam:[-1.8,2.8,4.5]},
+ {q:"Juste après le collage, que contrôle-t-on ?",c:["La tension de bande et le passage du collage dans la machine","Le stock de bobines","La propreté du sol","La pression des rouleaux encreurs"],a:0,why:"Le collage crée une surépaisseur : la feuille qui le contient doit être repérée et écartée.",state:8,hi:["newweb"],focus:"web",label:"Bande papier",cam:[-0.5,3.2,7.5]}
+];
 
-const scene = new THREE.Scene();
-const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const $=id=>document.getElementById(id);
+const canvas=$("c"), stageEl=canvas.parentElement;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.physicallyCorrectLights=true;
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+scene.background=(()=>{const c=document.createElement("canvas");c.width=1024;c.height=640;const g=c.getContext("2d");
+ const gr=g.createRadialGradient(512,200,40,512,320,700);gr.addColorStop(0,"#1c3f6e");gr.addColorStop(.55,"#0f2645");gr.addColorStop(1,"#060f1d");g.fillStyle=gr;g.fillRect(0,0,1024,640);
+ for(let i=0;i<60000;i++){g.fillStyle=Math.random()<.5?"rgba(255,255,255,.035)":"rgba(0,0,0,.06)";g.fillRect(Math.random()*1024,Math.random()*640,1,1)}
+ const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t})();
+scene.fog=new THREE.Fog(0x0b1d36,18,34);
+const camera=new THREE.PerspectiveCamera(38,1,0.1,100);
+camera.position.set(6,5,11.5);
+const controls=new THREE.OrbitControls(camera,canvas);
+controls.enableDamping=true;controls.minDistance=3;controls.maxDistance=20;controls.maxPolarAngle=Math.PI*0.49;
+controls.target.set(1.4,1.2,0);
 
-const camera = new THREE.PerspectiveCamera(30, innerWidth/innerHeight, 0.4, 80);
+{const pm=new THREE.PMREMGenerator(renderer);scene.environment=pm.fromScene(new THREE.RoomEnvironment(),0.03).texture;}
+scene.add(new THREE.HemisphereLight(0xdfe9ff,0x0a1729,0.6));
+const sun=new THREE.DirectionalLight(0xfff4e8,2.6);sun.position.set(3,11,7);sun.castShadow=true;
+sun.shadow.mapSize.set(4096,4096);Object.assign(sun.shadow.camera,{left:-10,right:10,top:8,bottom:-8,near:1,far:30});sun.shadow.bias=-0.0005;sun.shadow.radius=3;sun.shadow.normalBias=0.02;scene.add(sun);
+const rim=new THREE.DirectionalLight(0x7fb0ff,1.4);rim.position.set(-6,4,-5);scene.add(rim);
 
-/* Lumières : un spot principal qui balaie (comme dans ta scène Blender), un contre-jour froid, une ambiance très basse */
-scene.add(new THREE.HemisphereLight(0x9fb8cc, 0x05070a, 0.086));
-const key = new THREE.SpotLight(0xfffdfa, 440, 60, THREE.MathUtils.degToRad(20.2), 0.79, 2);
-key.position.set(-6, 5, 11);
-scene.add(key, key.target);
-const rim = new THREE.SpotLight(0x78c2ff, 244, 60, THREE.MathUtils.degToRad(28.8), 0.96, 2);
-rim.position.set(8, -3, -10);
-scene.add(rim, rim.target);
-
-/* ---------- Carte ---------- */
-function roundedShape(w,h,r){
-  const s = new THREE.Shape(), x=-w/2, y=-h/2;
-  s.moveTo(x+r,y); s.lineTo(x+w-r,y); s.quadraticCurveTo(x+w,y,x+w,y+r);
-  s.lineTo(x+w,y+h-r); s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  s.lineTo(x+r,y+h); s.quadraticCurveTo(x,y+h,x,y+h-r);
-  s.lineTo(x,y+r); s.quadraticCurveTo(x,y,x+r,y);
-  return s;
-}
-const shape = roundedShape(W,H,R);
-function faceGeo(){
-  const g = new THREE.ShapeGeometry(shape, 24);
-  const p = g.attributes.position, uv = g.attributes.uv;
-  for(let i=0;i<p.count;i++) uv.setXY(i, p.getX(i)/W+.5, p.getY(i)/H+.5);
-  return g;
-}
-const loader = new THREE.TextureLoader();
-const aniso = renderer.capabilities.getMaxAnisotropy();
-// charge une image ; en cas d'échec, on continue sans bloquer la page
-const missing = [];
-function tex(url, cs=THREE.SRGBColorSpace){
-  return new Promise(res=>loader.load(url,
-    t=>{ t.colorSpace=cs; t.anisotropy=aniso; res(t); },
-    undefined,
-    ()=>{ missing.push(url); console.warn("Image introuvable :", url); res(null); }));
-}
-
-function faceMat(map){
-  return new THREE.MeshPhysicalMaterial({
-    map, color:0xf7f8f9, roughness:0.336, metalness:0, envMapIntensity:0.84,
-    clearcoat:0.96, clearcoatRoughness:0.132,
-    iridescence:.7, iridescenceIOR:1.45, iridescenceThicknessRange:[180,620],
-    specularIntensity:.6
-  });
-}
-
-const card = new THREE.Group(); scene.add(card);
-/* Tranche noire tout autour */
-const edge = new THREE.Mesh(
-  new THREE.ExtrudeGeometry(shape,{depth:T,bevelEnabled:false,curveSegments:24}),
-  [new THREE.MeshBasicMaterial({visible:false}), new THREE.MeshPhysicalMaterial({color:0x050608, roughness:.3, clearcoat:1})]
-);
-edge.position.z = -T/2; card.add(edge);
-
-// 1er affichage rapide en 2K (~2 Mo au total), la 4K arrive ensuite en arrière-plan
-const [frontTex, backTex] = await Promise.all([tex("front_2k.webp"), tex("back_2k.webp")]);
-const frontMat = faceMat(frontTex), backMat = faceMat(backTex);
-// recto : vernis plus mat, pour qu'il ne brûle pas plus que le verso
-frontMat.clearcoat = .5; frontMat.clearcoatRoughness = .22; frontMat.roughness = .42;
-// fenêtres transparentes : le blanc de la bande de galets est découpé dans les deux textures
-for (const m of [frontMat, backMat]) {
-  m.alphaTest = .5; m.side = THREE.DoubleSide;
-  // impression vue par transparence (face arrière) : couleur pure, sans reflet ni volume
-  m.onBeforeCompile = sh=>{ sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>',
-    'if(!gl_FrontFacing) outgoingLight = diffuseColor.rgb * 0.9;\n#include <opaque_fragment>'); };
-}
-const front = new THREE.Mesh(faceGeo(), frontMat); front.position.z = T/2; card.add(front);
-const back  = new THREE.Mesh(faceGeo(), backMat);  back.rotation.y = Math.PI; back.position.z = -T/2; card.add(back);
-
-/* ---------- Hologramme Kinegram (recto) ---------- */
-const holoTex = await tex("holo.webp", THREE.NoColorSpace);
-const HU0=.169, HU1=.486, HV0=.503, HV1=.812;          // position relevée sur la maquette
-const holoMat = new THREE.ShaderMaterial({
-  transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2,
-  uniforms:{ map:{value:holoTex}, keyPos:{value:new THREE.Vector3()}, uMove:{value:0} },
-  vertexShader:`
-    varying vec2 vUv; varying vec3 vWorld; varying vec3 vN;
-    void main(){
-      vUv = uv;
-      vec4 w = modelMatrix * vec4(position,1.0);
-      vWorld = w.xyz; vN = normalize(mat3(modelMatrix) * normal);
-      gl_Position = projectionMatrix * viewMatrix * w;
-    }`,
-  fragmentShader:`
-    uniform sampler2D map; uniform vec3 keyPos; uniform float uMove;   // uMove : 0 à l'arrêt, 1 en mouvement rapide
-    varying vec2 vUv; varying vec3 vWorld; varying vec3 vN;
-    void main(){
-      vec4 tex = texture2D(map, vUv);
-      if(tex.a < .01) discard;
-      vec3 N = normalize(vN);
-      vec3 V = normalize(cameraPosition - vWorld);
-      vec3 L = normalize(keyPos - vWorld);
-      vec3 H = normalize(L + V);
-      vec2 tilt = V.xy;                                  // inclinaison de la vue sur la carte
-      float phase = vUv.x*3.2 + vUv.y*1.9 + tilt.x*2.8 + tilt.y*2.1 + 0.15*sin(vUv.y*14.0 + vUv.x*9.0);
-      vec3 rainbow = 0.5 + 0.5*cos(6.2832*(phase + vec3(0.0, 0.33, 0.67)));
-      float grating = 0.5 + 0.5*sin((vUv.x + vUv.y*0.35)*1100.0 + tilt.x*60.0);   // réseau de diffraction
-      float nh = max(dot(N,H), 0.0);
-      float flash = pow(nh, 7.0);                        // le spot qui passe allume l'hologramme
-      float spec  = pow(nh, 60.0);
-      vec3 base = tex.rgb;
-      float lum = dot(base, vec3(.299,.587,.114));
-      float sat = max(max(base.r,base.g),base.b) - min(min(base.r,base.g),base.b);
-      float irid = (0.012 + 0.13*uMove) * (1.0 - 0.6*smoothstep(0.25, 0.6, sat));
-      vec3 col = mix(base, rainbow, irid);   // les aplats francs (fleur rouge, ellipse bleue) gardent leur couleur
-      col *= 0.95 + 0.08*flash*(0.3 + uMove);
-      col += (rainbow - 0.5) * grating * (0.005 + 0.06*uMove) * (0.5 + flash);
-      col += spec * (0.06 + 0.2*uMove);
-      // traits noirs : restent sombres mais métalliques
-      col = mix(col, base*0.8 + rainbow*(0.01 + 0.08*uMove), smoothstep(0.32, 0.08, lum));
-      gl_FragColor = vec4(col, tex.a * 0.25);   // posé à 25 % sur la carte
-    }`
-});
-const holo = new THREE.Mesh(new THREE.PlaneGeometry((HU1-HU0)*W, (HV1-HV0)*H), holoMat);
-holo.position.set(((HU0+HU1)/2-.5)*W, (.5-(HV0+HV1)/2)*H, T/2 + .002);
-holo.renderOrder = 2;
-card.add(holo);
-{
-  const ld = document.getElementById("loading");
-  if(missing.length){ ld.textContent = "FICHIER INTROUVABLE : " + missing.join(", "); setTimeout(()=>ld.classList.add("done"), 4000); }
-  else ld.classList.add("done");
-}
-if(!holoTex) holo.visible = false;
-// passage en 4K en arrière-plan, sans bloquer l'affichage
-Promise.all([tex("front.webp"), tex("back.webp")]).then(([f,b])=>{
-  for(const [m,t] of [[frontMat,f],[backMat,b]]){ if(!t) continue; if(m.map) m.map.dispose(); m.map=t; m.needsUpdate=true; }
-});
-
-/* Position 3D et normale d'un hotspot */
-function hsWorld(h){
-  const x = (h.u-.5)*W, y = (.5-h.v)*H;
-  return h.face==="front"
-    ? {p:new THREE.Vector3(x,y,T/2), n:new THREE.Vector3(0,0,1)}
-    : {p:new THREE.Vector3(-x,y,-T/2), n:new THREE.Vector3(0,0,-1)};
-}
-
-/* ---------- Rig caméra : cible + coordonnées sphériques (interpolées séparément = trajectoires en arc) ---------- */
-const rig = {tx:0,ty:0,tz:0, az:0, el:.18, r:19, fov:30};
-const deg = THREE.MathUtils.degToRad;
-function applyRig(){
-  const ce = Math.cos(rig.el);
-  camera.position.set(
-    rig.tx + rig.r*ce*Math.sin(rig.az),
-    rig.ty + rig.r*Math.sin(rig.el),
-    rig.tz + rig.r*ce*Math.cos(rig.az));
-  camera.fov = rig.fov; camera.updateProjectionMatrix();
-  camera.lookAt(rig.tx,rig.ty,rig.tz);
-}
-function nearestAngle(from,to){ let d=((to-from+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; return from+d; }
-
-/* plan large : orbite lente en boucle, comme ton rendu Blender */
-let mode = "idle", idleT = 0, idleBase = 0;
-function keyPose(t, az){
-  const a = az - 0.5 + Math.sin(t*.5)*.7;          // le spot balaie de part et d'autre de la caméra
-  return {x:Math.sin(a)*13, y:5+Math.sin(t*.35)*2, z:Math.cos(a)*13};
-}
-function idlePose(t){
-  return {tx:0,ty:0,tz:0, az: idleBase + t*.12, el:.16+Math.sin(t*.37)*.12, r:19+Math.sin(t*.23)*1.5, fov:30};
-}
-
-let current = null, tl = null;
-function stopTl(){ if(tl){tl.kill(); tl=null;} }
-
-function flyTo(h, {hold=0}={}){
-  stopTl(); mode="fly"; current=h.id; updateUI(h);
-  const {p} = hsWorld(h);
-  const baseAz = h.face==="front" ? 0 : Math.PI;
-  const az = nearestAngle(rig.az, baseAz + deg(h.az));
-  const el = deg(h.el);
-  const dur = reduce ? .01 : 2.8;
-  tl = gsap.timeline();
-  // 1. recul léger + décollage (respiration avant l'approche)
-  tl.to(rig,{r:Math.max(rig.r,14), el:el*.5+.25, duration:dur*.3, ease:"power2.inOut"},0);
-  // 2. arc vers l'angle du hotspot pendant que la cible glisse dessus
-  tl.to(rig,{az, duration:dur, ease:"power3.inOut"},0);
-  tl.to(rig,{tx:p.x,ty:p.y,tz:p.z, duration:dur, ease:"power3.inOut"},0);
-  tl.to(rig,{r:h.dist, el, fov:26, duration:dur*.75, ease:"power3.inOut"},dur*.25);
-  // 3. balayage du spot sur la zone pendant l'arrivée
-  const a0 = az - deg(55), a1 = az + deg(40);
-  tl.to(key.position,{x:p.x+Math.sin(a0)*10, y:p.y+6, z:p.z+Math.cos(a0)*10, duration:dur*.6, ease:"sine.inOut"},0);
-  tl.to(key.position,{x:p.x+Math.sin(a1)*9, y:p.y+3, z:p.z+Math.cos(a1)*9, duration:dur*1.2, ease:"sine.inOut"},dur*.6);
-  tl.to(key.target.position,{x:p.x,y:p.y,z:p.z,duration:dur,ease:"power3.inOut"},0);
-  // 4. dérive lente une fois arrivé (le plan continue de vivre)
-  tl.to(rig,{az:az+deg(6)*Math.sign(h.az||1), r:h.dist*.88, duration:hold||6, ease:"sine.inOut"}, dur);
-  return tl;
-}
-
-function backToWide(){
-  stopTl(); current=null; updateUI(null);
-  mode="fly";
-  idleBase = nearestAngle(idleT*.12, rig.az) - idleT*.12;   // l'orbite repart de l'angle actuel
-  const target = idlePose(idleT);
-  tl = gsap.timeline({onComplete:()=>{mode="idle";}});
-  tl.to(rig,{...target, duration:reduce?.01:2.4, ease:"power3.inOut"});
-  tl.to(key.position,{...keyPose(idleT, target.az),duration:reduce?.01:2.4,ease:"sine.inOut"},0);
-  tl.to(key.target.position,{x:0,y:0,z:0,duration:2.4,ease:"power3.inOut"},0);
-}
-
-async function tour(){
-  const btn = document.getElementById("tour");
-  if(btn.dataset.running){ delete btn.dataset.running; btn.textContent="Lancer la visite"; backToWide(); return; }
-  btn.dataset.running="1"; btn.textContent="Arrêter la visite";
-  for(const h of HOTSPOTS){
-    if(!btn.dataset.running) return;
-    await new Promise(res=>{ const t=flyTo(h,{hold:2.6}); t.eventCallback("onComplete",res); });
-  }
-  delete btn.dataset.running; btn.textContent="Lancer la visite"; backToWide();
-}
-
-/* ---------- UI ---------- */
-const list = document.getElementById("list");
-const markersEl = document.getElementById("markers");
-const markers = HOTSPOTS.map((h,i)=>{
-  const b = document.createElement("button");
-  b.className="hs"; b.type="button"; b.dataset.id=h.id;
-  b.innerHTML=`<i>${String(i+1).padStart(2,"0")}</i><span>${h.title}</span><small>${h.face==="front"?"recto":"verso"}</small>`;
-  b.onclick=()=>{ flyTo(h); toggleRail(false); }; list.appendChild(b);
-  const m = document.createElement("button");
-  m.className="marker"; m.type="button"; m.setAttribute("aria-label",h.title);
-  const lbl=document.createElement("b"); lbl.textContent=h.title; m.appendChild(lbl);
-  m.onclick=()=>flyTo(h); markersEl.appendChild(m);
-  return {h,m,...hsWorld(h)};
-});
-function updateUI(h){
-  list.querySelectorAll(".hs").forEach(b=>b.setAttribute("aria-current", h&&b.dataset.id===h.id?"true":"false"));
-  const s = document.getElementById("sheet");
-  if(!h){ s.classList.add("off"); return; }
-  const i = HOTSPOTS.indexOf(h)+1;
-  document.getElementById("sEyebrow").textContent = `${String(i).padStart(2,"0")} · ${h.face==="front"?"RECTO":"VERSO"}`;
-  document.getElementById("sTitle").textContent = h.title;
-  document.getElementById("sText").textContent = h.text;
-  s.classList.remove("off");
-}
-document.getElementById("wide").onclick = ()=>{ const b=document.getElementById("tour"); delete b.dataset.running; b.textContent="Lancer la visite"; backToWide(); };
-document.getElementById("tour").onclick = tour;
-document.getElementById("labels").onclick = e=>{
-  const on = e.currentTarget.getAttribute("aria-pressed")!=="true";
-  e.currentTarget.setAttribute("aria-pressed", on);
-  e.currentTarget.textContent = on ? "Masquer les noms" : "Afficher les noms";
-  document.body.classList.toggle("labels", on);
+// ---------- textures ----------
+function tex(draw,rx=1,ry=1,srgb=true,size=512){const c=document.createElement("canvas");c.width=c.height=size;const g=c.getContext("2d");draw(g,size);
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);if(srgb)t.encoding=THREE.sRGBEncoding;t.anisotropy=8;return t}
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function speckle(g,s,n,light,dark,sz=1.6){for(let i=0;i<n;i++){g.fillStyle=Math.random()<.5?light:dark;const r=rnd(.4,sz);g.fillRect(Math.random()*s,Math.random()*s,r,r)}}
+function blotch(g,s,n,col,rmax){for(let i=0;i<n;i++){const x=Math.random()*s,y=Math.random()*s,r=rnd(rmax*.3,rmax);const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,col);gr.addColorStop(1,"rgba(0,0,0,0)");g.fillStyle=gr;g.fillRect(x-r,y-r,r*2,r*2)}}
+function streaks(g,s,n,light,dark){for(let i=0;i<n;i++){g.strokeStyle=Math.random()<.5?light:dark;g.lineWidth=rnd(.4,1.2);const y=Math.random()*s,x=Math.random()*s,l=rnd(s*.2,s*.9);g.beginPath();g.moveTo(x,y);g.lineTo(x+l,y+rnd(-1,1));g.stroke()}}
+function rings(core){return tex((g,s)=>{g.fillStyle="#efece4";g.fillRect(0,0,s,s);const c=s/2;
+  for(let r=s/2;r>s*core;r-=1.3){g.strokeStyle=`rgba(${150+Math.random()*60|0},${145+Math.random()*55|0},${130+Math.random()*50|0},${rnd(.15,.45)})`;g.lineWidth=.8;g.beginPath();g.arc(c,c,r,0,7);g.stroke()}
+  g.fillStyle="#8a6a45";g.beginPath();g.arc(c,c,s*core,0,7);g.fill();g.fillStyle="#2a2018";g.beginPath();g.arc(c,c,s*core*.7,0,7);g.fill()})}
+const T={
+ panel:tex((g,s)=>{g.fillStyle="#dfe3e8";g.fillRect(0,0,s,s);blotch(g,s,30,"rgba(0,0,0,.025)",90);speckle(g,s,15000,"rgba(255,255,255,.12)","rgba(0,0,0,.04)",1)},1,1),
+ dark:tex((g,s)=>{g.fillStyle="#2a3038";g.fillRect(0,0,s,s);speckle(g,s,20000,"rgba(255,255,255,.05)","rgba(0,0,0,.15)",1)},1,1),
+ paint:tex((g,s)=>{g.fillStyle="#1f4f86";g.fillRect(0,0,s,s);blotch(g,s,30,"rgba(255,255,255,.04)",90);speckle(g,s,20000,"rgba(255,255,255,.05)","rgba(0,0,0,.08)",1);blotch(g,s,8,"rgba(20,20,20,.25)",25)},1,1),
+ bump:tex((g,s)=>{g.fillStyle="#808080";g.fillRect(0,0,s,s);speckle(g,s,30000,"#8c8c8c","#727272",1.4)},1,1,false),
+ steel:tex((g,s)=>{g.fillStyle="#b8c0c8";g.fillRect(0,0,s,s);streaks(g,s,2500,"rgba(255,255,255,.18)","rgba(40,48,56,.18)")},1,1),
+ alu:tex((g,s)=>{g.fillStyle="#c9ced3";g.fillRect(0,0,s,s);streaks(g,s,3000,"rgba(255,255,255,.2)","rgba(60,70,80,.12)");blotch(g,s,10,"rgba(30,90,160,.25)",60)},1,1),
+ blanket:tex((g,s)=>{g.fillStyle="#1d3c6e";g.fillRect(0,0,s,s);speckle(g,s,25000,"rgba(255,255,255,.06)","rgba(0,0,0,.2)",1.2);blotch(g,s,14,"rgba(0,0,0,.35)",50)},1,1),
+ rubber:tex((g,s)=>{g.fillStyle="#1d1d1d";g.fillRect(0,0,s,s);speckle(g,s,25000,"#2a2a2a","#111",1.2);blotch(g,s,10,"rgba(20,60,140,.35)",60)},1,1),
+ paperSide:tex((g,s)=>{g.fillStyle="#f1eee6";g.fillRect(0,0,s,s);for(let i=0;i<900;i++){g.fillStyle=`rgba(120,110,95,${rnd(.02,.08)})`;g.fillRect(0,Math.random()*s,s,rnd(.5,1.5))}},1,1),
+ wrap:tex((g,s)=>{g.fillStyle="#7a8a96";g.fillRect(0,0,s,s);streaks(g,s,1800,"rgba(255,255,255,.12)","rgba(0,0,0,.15)");
+   g.fillStyle="#f2f2f2";g.fillRect(s*.38,s*.35,s*.24,s*.3);g.fillStyle="#222";for(let i=0;i<6;i++)g.fillRect(s*.41,s*.39+i*s*.035,s*rnd(.08,.18),s*.012);
+   g.fillStyle="#d9d0b8";g.fillRect(0,s*.1,s,s*.025);g.fillRect(0,s*.86,s,s*.025)},1,1),
+ grille:tex((g,s)=>{g.fillStyle="#1e242b";g.fillRect(0,0,s,s);for(let y=40;y<s-30;y+=36){g.fillStyle="#07090c";g.fillRect(30,y,s-60,16);g.fillStyle="rgba(255,255,255,.12)";g.fillRect(30,y+16,s-60,2)}},1,1),
+ hmi:tex((g,s)=>{g.fillStyle="#061428";g.fillRect(0,0,s,s);g.fillStyle="#2fd3a1";g.fillRect(20,20,s-40,40);g.fillStyle="#9fc3ff";for(let i=0;i<6;i++)g.fillRect(20,90+i*55,rnd(80,s-40),22);g.fillStyle="#ff7a2e";g.fillRect(20,s-70,s-40,40)},1,1,true,256),
+ tape:tex((g,s)=>{g.fillStyle="#f28c28";g.fillRect(0,0,s,s);streaks(g,s,500,"rgba(255,255,255,.2)","rgba(0,0,0,.1)")},1,1),
+ guard:tex((g,s)=>{g.fillStyle="#f2b705";g.fillRect(0,0,s,s);g.save();g.translate(s/2,s/2);g.rotate(-Math.PI/4);g.fillStyle="#1c1c1c";for(let i=-s;i<s;i+=64)g.fillRect(i,-s,26,s*2);g.restore();speckle(g,s,15000,"rgba(255,255,255,.08)","rgba(0,0,0,.15)",1.2)},4,1),
+ floor:tex((g,s)=>{g.fillStyle="#3a4048";g.fillRect(0,0,s,s);blotch(g,s,80,"rgba(0,0,0,.18)",70);blotch(g,s,50,"rgba(255,255,255,.05)",60);speckle(g,s,60000,"rgba(255,255,255,.08)","rgba(0,0,0,.2)",1.4);
+   g.strokeStyle="rgba(242,183,5,.8)";g.lineWidth=10;g.strokeRect(20,20,s-40,s-40)},1,1),
+ screen:tex((g,s)=>{g.fillStyle="#061428";g.fillRect(0,0,s,s);g.fillStyle="#2fd3a1";g.font="bold 42px monospace";g.fillText("DÉROULEUR 1",30,70);
+   g.fillStyle="#9fc3ff";g.font="30px monospace";g.fillText("Bobine active  Ø 230 mm",30,140);g.fillText("Bobine neuve   Ø 1000 mm",30,190);g.fillText("Vitesse  8,2 m/s",30,240);
+   g.fillStyle="#ff7a2e";g.fillRect(30,300,s-60,40);g.fillStyle="#061428";g.font="bold 28px monospace";g.fillText("COLLAGE ARMÉ",40,330);
+   g.strokeStyle="#2fd3a1";g.lineWidth=3;g.beginPath();g.moveTo(30,460);for(let x=0;x<s-60;x+=8)g.lineTo(30+x,430+Math.sin(x/30)*10);g.stroke()},1,1)
 };
-const rail=document.getElementById("rail"), burger=document.getElementById("burger");
-function toggleRail(open){
-  open = open ?? !rail.classList.contains("open");
-  rail.classList.toggle("open", open); burger.setAttribute("aria-expanded", open);
-}
-burger.onclick = ()=>toggleRail();
-addEventListener("pointerdown",e=>{ if(rail.classList.contains("open") && !rail.contains(e.target) && !burger.contains(e.target)) toggleRail(false); });
-addEventListener("keydown",e=>{
-  if(e.key!=="Escape") return;
-  if(rail.classList.contains("open")){ toggleRail(false); burger.focus(); return; }
-  document.getElementById("wide").click();
-});
+const M=(map,metal,rough,bump=T.bump,bs=0.01,cc=0)=>new THREE.MeshPhysicalMaterial({map,bumpMap:bump,bumpScale:bs,metalness:metal,roughness:rough,clearcoat:cc,clearcoatRoughness:0.25,envMapIntensity:1});
+const matFrame=M(T.panel,0.0,0.38,T.bump,0.002,0.6),matDark=M(T.dark,0.2,0.5,T.bump,0.004,0.3),matSteel=M(T.steel,1,0.16,null),matAlu=M(T.alu,0.95,0.24,null),matBlanket=M(T.blanket,0,0.8),matRubber=M(T.rubber,0,0.85),
+      matGuard=M(T.guard,0.2,0.55),matTape=M(T.tape,0,0.6,null),matWrap=M(T.wrap,0.1,0.55,null),matPaperSide=M(T.paperSide,0,0.85,null),
+      matCore=M(null,0,0.9,null);matCore.color.set(0x8a6a45);
+const matGlass=new THREE.MeshPhysicalMaterial({color:0xdfe9f5,transparent:true,opacity:.07,roughness:.04,metalness:0,clearcoat:1,clearcoatRoughness:.05,envMapIntensity:1.5,depthWrite:false});
+const matGrille=new THREE.MeshStandardMaterial({map:T.grille,roughness:.6,metalness:.4});
+const matWeb=new THREE.MeshStandardMaterial({color:0xf3f0e8,roughness:0.85,side:THREE.DoubleSide});
+const matScreen=new THREE.MeshStandardMaterial({map:T.screen,emissive:0xffffff,emissiveMap:T.screen,emissiveIntensity:0.9,roughness:0.3});
 
-/* ---------- Manipulation libre à la souris / au doigt ---------- */
-const cvs = renderer.domElement;
-let drag = null, vel = {az:0, el:0};
-function takeControl(){
-  stopTl();
-  const b=document.getElementById("tour"); if(b.dataset.running){ delete b.dataset.running; b.textContent="Lancer la visite"; }
-  if(mode!=="manual"){ mode="manual"; }
-  document.getElementById("hint").classList.add("off");
-}
-const pointers = new Map(); let pinch0 = null;
-cvs.addEventListener("pointerdown",e=>{
-  cvs.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  takeControl(); vel={az:0,el:0};
-  drag={x:e.clientX,y:e.clientY}; cvs.classList.add("dragging");
-  if(pointers.size===2){ const [a,b]=[...pointers.values()]; pinch0={d:Math.hypot(a.x-b.x,a.y-b.y), r:rig.r}; }
-});
-cvs.addEventListener("pointermove",e=>{
-  if(!pointers.has(e.pointerId)) return;
-  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pointers.size===2 && pinch0){
-    const [a,b]=[...pointers.values()];
-    rig.r = THREE.MathUtils.clamp(pinch0.r * pinch0.d / Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)), 1.2, 32);
-    return;
-  }
-  if(!drag) return;
-  const k = 0.0055 * Math.min(1, rig.r/8 + .25);      // plus fin quand on est près
-  const dAz = -(e.clientX-drag.x)*k, dEl = (e.clientY-drag.y)*k;
-  rig.az += dAz; rig.el = THREE.MathUtils.clamp(rig.el + dEl, -1.45, 1.45);
-  vel = {az:dAz, el:dEl};
-  drag={x:e.clientX,y:e.clientY};
-});
-function endPointer(e){
-  pointers.delete(e.pointerId);
-  if(pointers.size<2) pinch0=null;
-  if(pointers.size===0){ drag=null; cvs.classList.remove("dragging"); }
-}
-cvs.addEventListener("pointerup",endPointer);
-cvs.addEventListener("pointercancel",endPointer);
-cvs.addEventListener("wheel",e=>{
-  e.preventDefault(); takeControl();
-  rig.r = THREE.MathUtils.clamp(rig.r * Math.exp(e.deltaY*0.0012), 1.2, 32);
-},{passive:false});
-cvs.addEventListener("dblclick",()=>document.getElementById("wide").click());
+const parts={};
+function part(name){const g=new THREE.Group();scene.add(g);parts[name]=g;return g}
+const _bevel={};
+function box(w,h,d,mat){const m=Math.min(w,h,d);if(m<0.06)return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+ const key=[w,h,d].join("|");let geo=_bevel[key];
+ if(!geo){const r=Math.min(0.025,m*0.2);const sh=new THREE.Shape();const W=w/2-r,H=h/2-r;sh.moveTo(-W,-H);sh.lineTo(W,-H);sh.lineTo(W,H);sh.lineTo(-W,H);sh.lineTo(-W,-H);
+  geo=new THREE.ExtrudeGeometry(sh,{depth:d-2*r,bevelEnabled:true,bevelThickness:r,bevelSize:r,bevelSegments:3,curveSegments:4});geo.translate(0,0,-(d-2*r)/2);geo.computeVertexNormals();_bevel[key]=geo}
+ return new THREE.Mesh(geo,mat)}
+function roll(r,len,mat,x,y,z=0,seg=72){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,seg),mat);m.rotation.x=Math.PI/2;m.position.set(x,y,z);return m}
+function reel(r,len,core,x,y,z){const caps=rings(core/r);return new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,64),[matPaperSide,M(caps,0,0.9,null),M(caps,0,0.9,null)])}
+function seg(a,b,w,mat){const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b);const len=A.distanceTo(B);const m=new THREE.Mesh(new THREE.BoxGeometry(len,0.012,w),mat);
+ m.position.copy(A).add(B).multiplyScalar(.5);m.rotation.z=Math.atan2(B.y-A.y,B.x-A.x);return m}
 
-/* ---------- Boucle ---------- */
-const v = new THREE.Vector3(), camDir = new THREE.Vector3(), prevCam = new THREE.Vector3();
-let last = performance.now();
-function frame(now){
-  const dt = Math.min(.05,(now-last)/1000); last=now;
-  if(mode==="idle" && !reduce){
-    idleT += dt;
-    Object.assign(rig, idlePose(idleT));
-    // le spot tourne lentement autour de la carte, côté caméra
-    const k = keyPose(idleT, rig.az); key.position.set(k.x,k.y,k.z);
-  } else if(mode==="manual"){
-    // inertie après le lâcher
-    if(!drag){ rig.az += vel.az; rig.el = THREE.MathUtils.clamp(rig.el+vel.el,-1.45,1.45); vel.az*=.92; vel.el*=.92; }
-    // le spot rejoint doucement la caméra, pour toujours éclairer la face regardée
-    const k = keyPose(idleT, rig.az), f = 1-Math.pow(.02,dt);
-    key.position.x += (rig.tx+k.x-key.position.x)*f;
-    key.position.y += (rig.ty+k.y-key.position.y)*f;
-    key.position.z += (rig.tz+k.z-key.position.z)*f;
-    key.target.position.lerp(new THREE.Vector3(rig.tx,rig.ty,rig.tz), f);
-  }
-  applyRig();
-  holoMat.uniforms.keyPos.value.copy(key.position);
-  // vitesse angulaire de la caméra : l'irisation ne se révèle qu'en mouvement
-  const ang = dt>0 ? camera.position.distanceTo(prevCam)/Math.max(rig.r,.5)/dt : 0;
-  prevCam.copy(camera.position);
-  const tgt = THREE.MathUtils.clamp((ang - .06)/.7, 0, 1);
-  holoMat.uniforms.uMove.value += (tgt - holoMat.uniforms.uMove.value) * (1 - Math.exp(-dt*(tgt>holoMat.uniforms.uMove.value?8:2.5)));
-  renderer.render(scene,camera);
-  // marqueurs : projection écran + masquage si la face est dos à la caméra
-  for(const o of markers){
-    camDir.copy(camera.position).sub(o.p);
-    const facing = camDir.dot(o.n) > 0;
-    v.copy(o.p).project(camera);
-    const x=(v.x*.5+.5)*innerWidth, y=(-v.y*.5+.5)*innerHeight;
-    const show = facing && v.z<1 && mode!=="fly-hide" && current!==o.h.id;
-    o.m.style.transform=`translate(${x}px,${y}px)`;
-    o.m.classList.toggle("hide", !show);
-  }
-  requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
+// sol
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(19,10),M(T.floor,0,0.55,T.bump,0.015,0.35));floor.rotation.x=-Math.PI/2;floor.position.set(2.2,-0.6,0.6);floor.receiveShadow=true;scene.add(floor);
+const grid=new THREE.GridHelper(22,44,0x3a6aa8,0x1d3a62);grid.position.y=-0.605;grid.material.transparent=true;grid.material.opacity=.12;scene.add(grid);
 
-addEventListener("resize",()=>{
-  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-});
+const LAIZE=2.0;
+// dérouleur : bâti
+{const g=part("stand");for(const z of[-1.2,1.2]){const p=box(0.5,3.4,0.16,matFrame);p.position.set(-3.2,1.1,z);g.add(p);const ft=box(1.6,0.14,0.5,matFrame);ft.position.set(-3.2,-0.53,z);g.add(ft)}
+ const top=box(0.4,0.3,2.56,matFrame);top.position.set(-3.2,2.85,0);g.add(top);
+ for(const z of[-1.6,1.6]){const r=box(2.4,0.08,0.06,matGuard);r.position.set(-2.4,0.4,z);g.add(r);const p=box(0.06,1,0.06,matGuard);p.position.set(-1.2,-0.1,z);g.add(p)}
+ g.add(roll(0.09,LAIZE+0.3,matSteel,-1.9,2.75));g.add(roll(0.09,LAIZE+0.3,matSteel,-1.2,2.3))}
+// bras porte-bobine neuve
+{const g=part("arms");for(const z of[-1.08,1.08]){const a=box(0.22,1.3,0.08,matFrame);a.position.set(-3.2,1.35,z);g.add(a);
+ const cone=new THREE.Mesh(new THREE.ConeGeometry(0.11,0.22,24),matSteel);cone.rotation.x=z>0?-Math.PI/2:Math.PI/2;cone.position.set(-3.2,0.7,z*0.95);g.add(cone)}}
+// bobine active (presque vide)
+{const g=part("oldreel");const c=roll(0.11,LAIZE+0.04,matCore,-3.2,2.2);g.add(c);
+ for(const z of[-1.08,1.08]){const cone=new THREE.Mesh(new THREE.ConeGeometry(0.11,0.22,24),matSteel);cone.rotation.x=z>0?-Math.PI/2:Math.PI/2;cone.position.set(-3.2,2.2,z*0.95);g.add(cone)}}
+{const g=part("oldpaper");const r=reel(0.36,LAIZE,0.11);r.rotation.x=Math.PI/2;r.position.set(-3.2,2.2,0);r.userData.spin=1;g.add(r)}
+// bobine neuve sur chariot
+{const g=part("newreel");const r=reel(0.8,LAIZE,0.11);r.rotation.x=Math.PI/2;r.position.set(-1.6,0.25,2.6);r.userData.spin=1;g.add(r)}
+{const g=part("wrap");const w=new THREE.Mesh(new THREE.CylinderGeometry(0.815,0.815,LAIZE*0.98,64,1,true),matWrap);w.material.side=THREE.DoubleSide;w.rotation.x=Math.PI/2;w.position.set(-1.6,0.25,2.6);g.add(w)}
+{const g=part("tape");// adhésif en W sur la tête de bobine
+ const pts=[[-1,0],[-.5,.14],[0,0],[.5,.14],[1,0]];for(let i=0;i<4;i++){const a=pts[i],b=pts[i+1];const z1=a[0]*LAIZE*.47,z2=b[0]*LAIZE*.47,t1=a[1],t2=b[1];
+  const len=Math.hypot(z2-z1,(t2-t1)*0.8);const s=box(0.06,0.012,len,matTape);const ang=0.35+(t1+t2)/2;
+  s.position.set(-1.6+Math.sin(ang)*0.808,0.25+Math.cos(ang)*0.808,2.6+(z1+z2)/2);s.rotation.set(Math.atan2((t2-t1)*0.8,z2-z1),0,-ang,"YXZ");g.add(s)}
+ const dot=new THREE.Mesh(new THREE.CircleGeometry(0.06,24),new THREE.MeshStandardMaterial({color:0xdde8ff,metalness:1,roughness:.1}));dot.position.set(-1.6+Math.sin(.6)*0.812,0.25+Math.cos(.6)*0.812,2.6+0.8);dot.lookAt(-1.6+Math.sin(.6)*2,0.25+Math.cos(.6)*2,3.4);g.add(dot)}
+{const g=part("cart");const b=box(1.5,0.22,1.7,matFrame);b.position.set(-1.6,-0.45,2.6);g.add(b);
+ const v=box(1.3,0.18,1.5,matSteel);v.position.set(-1.6,-0.28,2.6);g.add(v);
+ for(const x of[-.55,.55])for(const z of[-.7,.7])g.add(roll(0.08,0.06,matRubber,-1.6+x,-0.52,2.6+z,16));
+ const h=box(0.06,0.9,1.2,matSteel);h.position.set(-0.8,0.05,2.6);g.add(h)}
+// 4 groupes d'impression CMJN, blanchet contre blanchet
+const INKS=[["C","#00a3e0"],["M","#e4007c"],["J","#ffd400"],["N","#1b1b1b"]];
+function badge(l,c){return tex((g,s)=>{g.fillStyle="#e6e9ec";g.fillRect(0,0,s,s);g.fillStyle=c;g.fillRect(s*.12,s*.12,s*.76,s*.76);g.fillStyle=l==="J"?"#1b1b1b":"#ffffff";g.font=`bold ${s*.55}px "Barlow Condensed",Arial`;g.textAlign="center";g.textBaseline="middle";g.fillText(l,s/2,s*.53)},1,1,true,256)}
+{const g=part("unit");
+ INKS.forEach(([l,c],i)=>{const x=1.2+i*1.45;
+  {const p=box(1.2,3.6,0.12,matFrame);p.position.set(x,1.4,-1.3);g.add(p)}
+  for(const sx of[-1,1]){const st=box(0.18,3.6,0.12,matFrame);st.position.set(x+sx*0.51,1.4,1.3);g.add(st)}
+  {const br=box(0.84,0.85,0.12,matFrame);br.position.set(x,0.025,1.3);g.add(br);const tr=box(0.84,0.25,0.12,matFrame);tr.position.set(x,3.075,1.3);g.add(tr)}
+  const gl=new THREE.Mesh(new THREE.BoxGeometry(0.84,2.5,0.015),matGlass);gl.position.set(x,1.7,1.33);gl.userData.noShadow=1;g.add(gl);
+  const seal=box(0.86,0.02,0.02,matDark);seal.position.set(x,2.95,1.35);g.add(seal);const seal2=seal.clone();seal2.position.y=0.45;g.add(seal2);
+  const gr=new THREE.Mesh(new THREE.PlaneGeometry(0.62,0.3),matGrille);gr.position.set(x,0.05,1.362);g.add(gr);
+  const hmi=new THREE.Mesh(new THREE.PlaneGeometry(0.13,0.2),new THREE.MeshStandardMaterial({map:T.hmi,emissive:0xffffff,emissiveMap:T.hmi,emissiveIntensity:.8}));hmi.position.set(x+0.51,1.9,1.362);hmi.userData.keep=1;g.add(hmi);
+  const hd=box(0.03,0.5,0.05,matSteel);hd.position.set(x-0.36,1.7,1.37);g.add(hd);
+  for(const y of[2.43,0.81])for(const zz of[-1.16,1.16]){const brg=roll(0.13,0.08,matDark,x,y,zz,40);g.add(brg)}
+  const cap=box(1.24,0.12,2.74,matDark);cap.position.set(x,3.26,0);g.add(cap);
+  const base=box(1.24,0.34,2.74,matDark);base.position.set(x,-0.43,0);g.add(base);
+  g.add(roll(0.27,LAIZE+0.2,matAlu,x,2.43));g.add(roll(0.25,LAIZE+0.2,matBlanket,x,1.89));
+  g.add(roll(0.25,LAIZE+0.2,matBlanket,x,1.35));g.add(roll(0.27,LAIZE+0.2,matAlu,x,0.81));
+  const ink=new THREE.MeshStandardMaterial({color:c,roughness:.28,metalness:.05});
+  for(const[dx,y,m]of[[-.32,2.85,ink],[.32,2.85,ink],[0,3.05,matSteel],[-.32,0.4,ink],[.32,0.4,ink],[0,0.15,matSteel]])g.add(roll(0.1,LAIZE+0.1,m,x+dx,y));
+  const tray=box(0.46,0.05,LAIZE,ink);tray.position.set(x,3.35,0);g.add(tray);
+  const led=box(1.0,0.035,0.03,new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:1.4}));led.position.set(x,3.0,1.38);led.userData.keep=1;g.add(led);
+  const b=new THREE.Mesh(new THREE.PlaneGeometry(0.3,0.3),new THREE.MeshStandardMaterial({map:badge(l,c),roughness:.4}));b.position.set(x,3.26,1.375);g.add(b);
+  if(i<3)g.add(roll(0.07,LAIZE+0.3,matSteel,x+0.725,1.62))});
+ g.add(roll(0.1,LAIZE+0.3,matSteel,0.35,1.62));
+ const dry=box(1.7,1.9,2.74,matFrame);dry.position.set(7.4,0.55,0);g.add(dry);
+ const dryTop=box(1.74,0.12,2.78,matDark);dryTop.position.set(7.4,1.56,0);g.add(dryTop);
+ const win=box(1.3,0.5,0.02,new THREE.MeshStandardMaterial({color:0xff9b5a,emissive:0xff6a1a,emissiveIntensity:.9}));win.position.set(7.4,0.6,1.38);win.userData.keep=1;g.add(win);
+ g.add(roll(0.1,LAIZE+0.3,matSteel,6.4,1.62))}
+// bandes papier
+{const g=part("oldweb");g.add(seg([-3.2,2.56,0],[-1.9,2.84,0],LAIZE,matWeb));g.add(seg([-1.9,2.84,0],[-1.2,2.39,0],LAIZE,matWeb))}
+{const g=part("newweb");g.add(seg([-2.45,1.2,0],[-1.9,2.84,0],LAIZE,matWeb));g.add(seg([-1.9,2.84,0],[-1.2,2.39,0],LAIZE,matWeb))}
+{const g=part("web");g.add(seg([-1.2,2.21,0],[0.35,1.72,0],LAIZE,matWeb));g.add(seg([0.35,1.62,0],[6.4,1.62,0],LAIZE,matWeb));g.add(seg([6.4,1.62,0],[6.6,1.4,0],LAIZE,matWeb))}
+// pupitre
+{const g=part("console");const d=box(1.3,1.0,0.7,matFrame);d.position.set(0.6,-0.1,3.1);g.add(d);
+ const top=box(1.3,0.06,0.8,matSteel);top.position.set(0.6,0.43,3.08);top.rotation.x=0.35;g.add(top);
+ const sc=box(1.0,0.62,0.05,matScreen);sc.position.set(0.6,0.95,2.85);sc.rotation.x=-0.15;sc.userData.keep=1;g.add(sc);
+ const fr=box(1.08,0.7,0.04,matFrame);fr.position.set(0.6,0.95,2.83);fr.rotation.x=-0.15;g.add(fr);
+ [[0x2fd3a1,.25],[0xff7a2e,.5],[0xdd3333,.8]].forEach(([c,x])=>{const b=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.05,20),new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.4}));b.userData.keep=1;b.position.set(0.05+x,0.48,3.1);b.rotation.x=0.35;g.add(b)})}
+
+for(const n in parts)parts[n].traverse(o=>{if(o.isMesh){if(!o.userData.keep)o.material=Array.isArray(o.material)?o.material.map(m=>m.clone()):o.material.clone();o.castShadow=!o.userData.noShadow;o.receiveShadow=true}});
+
+const MOVES={
+ newreel:{3:[-1.6,0,-2.6],4:[0,0.45,0]}, tape:{3:[-1.6,0,-2.6],4:[0,0.45,0]}, wrap:{3:[-1.6,0,-2.6],4:[0,0.45,0]},
+ cart:{3:[-1.6,0,-2.6],4:[1.8,0,2.6]},
+ oldreel:{8:[1.4,-2.55,2.7]}
+};
+const VIS={wrap:[0,1],tape:[5,99],oldpaper:[0,6],oldweb:[0,6],newweb:[7,99]};
+const SPIN={oldpaper:[0,6],newreel:[6,99]};
+const ANCHOR={unit:[3.4,3.6,0],newreel:[-1.6,1.08,2.6],arms:[-3.2,2.0,1.12],tape:[-1.32,1.02,2.6],console:[0.6,1.3,2.85],oldreel:[-3.2,2.35,0],web:[-0.4,2.0,0]};
+function target(name,st){const v=new THREE.Vector3();const m=MOVES[name];if(m)for(const k in m)if(+k<=st)v.add(new THREE.Vector3(...m[k]));return v}
+function anchorPos(name){const a=new THREE.Vector3(...(ANCHOR[name]||[0,0,0]));if(parts[name])a.add(parts[name].position);return a}
+const inR=(r,st)=>!r||(st>=r[0]&&st<=r[1]);
+
+let lastCam=STEPS[0].cam,sceneState=0,highlight=new Set(),focus="unit",flying=true;
+const camGoal=new THREE.Vector3(...lastCam),tgtGoal=new THREE.Vector3(1.4,1.2,0);
+function applyScene(st,hi,f,label,cam){sceneState=st;highlight=new Set(hi);focus=f;$("labelTxt").textContent=label;
+ lastCam=cam;camGoal.set(...cam);tgtGoal.set(...(ANCHOR[f]||[0,0,0])).add(target(f,st)).lerp(new THREE.Vector3(1.2,1.1,0),0.4);flying=true}
+
+// ---------- procédure ----------
+let step=0;const LAST=STEPS.length-1;
+function setStep(i){showProc();step=Math.max(0,Math.min(LAST,i));const s=STEPS[step];
+  $("num").textContent=`Étape ${String(step).padStart(2,"0")} / ${String(LAST).padStart(2,"0")}`;
+  $("title").textContent=s.t;$("text").textContent=s.x;$("tools").textContent=s.tools;$("time").textContent=s.time;
+  $("detail").innerHTML=s.d.map(a=>`<li><span>${a}</span></li>`).join("");
+  $("safety").hidden=!s.safe;$("safetyTxt").textContent=s.safe||"";
+  $("bar").style.width=(step/LAST*100)+"%";$("prev").disabled=step===0;
+  $("next").textContent=step===LAST?"Passer au quiz →":(step===0?"Commencer →":"Étape validée →");
+  document.querySelectorAll("#steps li[data-k]").forEach(li=>{const k=+li.dataset.k;li.classList.toggle("on",k===step);li.querySelector(".chk").textContent=k<step?"✓":""});
+  applyScene(step,s.hi,s.focus,s.label,s.cam)}
+STEPS.forEach((s,k)=>{const li=document.createElement("li");li.dataset.k=k;li.innerHTML=`<button type="button"><span class="n">${String(k).padStart(2,"0")}</span><span>${s.t}</span><span class="chk"></span></button>`;
+ li.querySelector("button").onclick=()=>{stopTour();setStep(k)};$("steps").appendChild(li)});
+{const li=document.createElement("li");li.className="quizrow";li.innerHTML=`<button type="button"><span class="n">?</span><span>Quiz de validation</span><span class="chk"></span></button>`;
+ li.querySelector("button").onclick=()=>{stopTour();startQuiz()};$("steps").appendChild(li)}
+$("next").onclick=()=>{stopTour();step===LAST?startQuiz():setStep(step+1)};
+$("prev").onclick=()=>{stopTour();setStep(step-1)};
+$("reset").onclick=()=>{camGoal.set(...lastCam);flying=true};
+addEventListener("keydown",e=>{if(!$("procView").hidden){if(e.key==="ArrowRight"){stopTour();setStep(step+1)}if(e.key==="ArrowLeft"){stopTour();setStep(step-1)}}});
+let tourT=null;
+function stopTour(){if(tourT){clearInterval(tourT);tourT=null;$("tour").textContent="▶ Visite guidée"}}
+$("tour").onclick=()=>{if(tourT)return stopTour();setStep(0);$("tour").textContent="❚❚ Pause";tourT=setInterval(()=>{if(step>=LAST)return stopTour();setStep(step+1)},5000)};
+controls.addEventListener("start",()=>{flying=false});
+function showProc(){$("procView").hidden=false;$("quizView").hidden=true;$("eyebrow").textContent="Fiche de poste · Conducteur dérouleur"}
+
+// ---------- quiz ----------
+let qi=0,answers=[];
+function startQuiz(){qi=0;answers=[];$("procView").hidden=true;$("quizView").hidden=false;$("eyebrow").textContent="Quiz de validation · 5 questions";renderQ()}
+function dots(){return `<div class="dots">${QUIZ.map((_,k)=>`<i class="${answers[k]===undefined?(k===qi?"c":""):(answers[k]?"g":"b")}"></i>`).join("")}</div>`}
+function renderQ(){const q=QUIZ[qi];$("bar").style.width=(qi/QUIZ.length*100)+"%";applyScene(q.state,q.hi,q.focus,q.label,q.cam);
+  $("quizBody").innerHTML=`${dots()}<span style="font-family:var(--f-mono);font-size:12px;color:var(--accent)">Question ${qi+1} / ${QUIZ.length}</span>
+   <h2 style="font-family:var(--f-display);font-size:25px;font-weight:600;margin:0;line-height:1.15;text-wrap:balance">${q.q}</h2>
+   <div class="choices">${q.c.map((c,k)=>`<button class="choice" type="button" data-k="${k}"><span class="k">${"ABCD"[k]}</span><span>${c}</span></button>`).join("")}</div><div id="fbBox"></div>`;
+  $("quizBody").querySelectorAll(".choice").forEach(b=>b.onclick=()=>answer(+b.dataset.k))}
+function answer(k){const q=QUIZ[qi],ok=k===q.a;answers[qi]=ok;
+  $("quizBody").querySelectorAll(".choice").forEach(b=>{const j=+b.dataset.k;b.disabled=true;if(j===q.a)b.classList.add("good");else if(j===k)b.classList.add("bad")});
+  $("quizBody").querySelector(".dots").outerHTML=dots();
+  $("fbBox").innerHTML=`<div class="fb ${ok?"":"no"}"><b>${ok?"Correct.":"Pas tout à fait."}</b><br>${q.why}</div>
+   <div class="nav" style="margin-top:12px"><button class="primary" id="qNext" type="button">${qi===QUIZ.length-1?"Voir le résultat →":"Question suivante →"}</button></div>`;
+  $("qNext").onclick=()=>{qi++;qi<QUIZ.length?renderQ():result()};$("qNext").focus()}
+function result(){const n=answers.filter(Boolean).length;$("bar").style.width="100%";
+  const msg=n===QUIZ.length?"Procédure maîtrisée. Le stagiaire peut passer à un changement de bobine encadré.":n>=3?"Bases acquises. Revoir les étapes manquées avant la mise en situation.":"À retravailler. Reprendre la procédure pas à pas avec le formateur.";
+  applyScene(8,[],"unit","Bobine rechargée",[6,5,11.5]);
+  $("quizBody").innerHTML=`${dots()}<div class="score"><b>${n}/${QUIZ.length}</b><span>bonnes réponses</span></div><p style="margin:0">${msg}</p>
+   <div class="nav"><button class="primary" id="qAgain" type="button">Refaire le quiz</button><button class="ghost" id="qBack" type="button">Revoir la procédure</button></div>`;
+  $("qAgain").onclick=startQuiz;$("qBack").onclick=()=>setStep(0)}
+
+// ---------- rendu ----------
+let composer=null,ssao=null;
+try{composer=new THREE.EffectComposer(renderer);composer.addPass(new THREE.RenderPass(scene,camera));
+ ssao=new THREE.SSAOPass(scene,camera,16,16);ssao.kernelRadius=0.6;ssao.minDistance=0.0005;ssao.maxDistance=0.06;composer.addPass(ssao);
+ composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(256,256),0.35,0.5,0.92));
+ composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));}catch(e){composer=null}
+function resize(){const w=stageEl.clientWidth,h=stageEl.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+ if(composer){composer.setPixelRatio(renderer.getPixelRatio());composer.setSize(w,h);if(ssao)ssao.setSize(w*renderer.getPixelRatio(),h*renderer.getPixelRatio())}}
+new ResizeObserver(resize).observe(stageEl);resize();
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clock=new THREE.Clock(),tmp=new THREE.Vector3(),acc=new THREE.Color("#ff7a2e");
+function eachMat(o,f){(Array.isArray(o.material)?o.material:[o.material]).forEach(f)}
+function loop(){
+  const dt=Math.min(clock.getDelta(),0.05),k=reduce?1:1-Math.pow(0.002,dt),t=clock.elapsedTime;
+  for(const n in parts){const p=parts[n];p.position.lerp(target(n,sceneState),k);
+    const pulse=highlight.has(n)?0.32+0.22*Math.sin(t*4):0;const vis=inR(VIS[n],sceneState)?1:0;const spin=SPIN[n]&&inR(SPIN[n],sceneState)&&!reduce;
+    p.traverse(o=>{if(!o.isMesh)return;if(spin&&o.userData.spin)o.rotation.y-=dt*(n==="oldpaper"?3:1.2);
+      eachMat(o,m=>{if(!o.userData.keep){m.emissive.copy(acc);m.emissiveIntensity=pulse}
+        if(VIS[n]){m.transparent=true;m.opacity+= (vis-m.opacity)*k;}});
+      if(VIS[n]){const op=Array.isArray(o.material)?o.material[0].opacity:o.material.opacity;o.visible=op>0.02;o.castShadow=op>0.5}})}
+  if(flying){camera.position.lerp(camGoal,k*0.8);controls.target.lerp(tgtGoal,k*0.8);if(camera.position.distanceTo(camGoal)<0.02)flying=false}
+  controls.update();composer?composer.render():renderer.render(scene,camera);
+  tmp.copy(anchorPos(focus)).project(camera);
+  const lab=$("label");lab.style.left=((tmp.x+1)/2*stageEl.clientWidth)+"px";lab.style.top=((1-tmp.y)/2*stageEl.clientHeight)+"px";lab.style.opacity=tmp.z<1?1:0;
+  requestAnimationFrame(loop)}
+// opacités initiales cohérentes avec l'étape 0
+for(const n in VIS)parts[n].traverse(o=>{if(o.isMesh)eachMat(o,m=>{m.transparent=true;m.opacity=inR(VIS[n],0)?1:0})});
+setStep(0);loop();
 </script>
-</body>
-</html>

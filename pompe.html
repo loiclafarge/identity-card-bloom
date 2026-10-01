@@ -1,0 +1,393 @@
+<title>Atelier pompe P-200</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: poste de formation, vue 3D à gauche, fiche d'intervention à droite ; empilé sur mobile. Thème unique bleu marine. */
+:root{
+  --bg:#0a1729; --bg2:#0f2240; --panel:#0f213b; --panel2:#0c1b31; --ink:#e9eff7; --muted:#8ea3bf; --line:#22395b;
+  --accent:#ff7a2e; --accent-ink:#0a1729; --ok:#4cc38a; --err:#ff6b6b; --warn-bg:#2a1f1a;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--noise),radial-gradient(120% 90% at 30% 0%,var(--bg2),var(--bg) 70%);background-color:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:16px;padding-inline:16px;padding-block:16px;height:100%;box-sizing:border-box}
+.stage{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;min-height:360px;
+  background:
+   var(--noise),
+   linear-gradient(rgba(120,170,230,.06) 1px,transparent 1px) 0 0/40px 40px,
+   linear-gradient(90deg,rgba(120,170,230,.06) 1px,transparent 1px) 0 0/40px 40px,
+   radial-gradient(80% 70% at 50% 35%,#16345c,#0b1b31 75%);
+  background-color:var(--bg)}
+.stage::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px rgba(0,0,0,.55)}
+#c{display:block;width:100%;height:100%;cursor:grab;position:relative;z-index:1}
+#c:active{cursor:grabbing}
+.tag{position:absolute;top:14px;left:16px;display:flex;flex-direction:column;gap:2px;pointer-events:none;z-index:2}
+.tag b{font-family:var(--f-display);font-size:30px;letter-spacing:.03em;font-weight:700;line-height:1}
+.tag span{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.hint{position:absolute;bottom:12px;left:16px;font-family:var(--f-mono);font-size:11px;color:var(--muted);pointer-events:none;z-index:2}
+.label{position:absolute;transform:translate(-50%,-100%);pointer-events:none;transition:opacity .25s;z-index:2}
+.label .pin{background:var(--accent);color:var(--accent-ink);font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.03em;padding:4px 10px;border-radius:3px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.label .stem{width:2px;height:28px;background:var(--accent);margin:0 auto}
+.label .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);margin:-2px auto 0;box-shadow:0 0 0 5px rgba(255,122,46,.28)}
+.viewbtn{position:absolute;top:14px;right:14px;display:flex;gap:6px;z-index:2;flex-wrap:wrap;justify-content:flex-end}
+button{font:inherit;color:inherit;cursor:pointer}
+.ghost{background:rgba(15,33,59,.85);border:1px solid var(--line);border-radius:4px;padding:6px 10px;font-size:13px}
+.ghost:hover{border-color:var(--muted)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.sheet{background:var(--noise),var(--panel);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;min-height:0;overflow:auto}
+.head{padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.head h1{font-family:var(--f-display);font-weight:700;font-size:28px;line-height:1.05;margin:0;text-wrap:balance}
+.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+.cur{padding:16px 18px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line)}
+.cur .num{font-family:var(--f-mono);font-size:12px;color:var(--accent);font-weight:500}
+.cur h2{font-family:var(--f-display);font-size:25px;font-weight:600;margin:0;line-height:1.1;text-wrap:balance}
+.cur p{margin:0;max-width:62ch;color:var(--ink)}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin:0}
+.meta dt{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding-top:2px}
+.meta dd{margin:0}
+.encart{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.encart h3{margin:0;font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.encart ol{margin:0;padding:0;list-style:none;counter-reset:a;display:flex;flex-direction:column;gap:7px}
+.encart li{counter-increment:a;display:grid;grid-template-columns:26px 1fr;gap:8px;font-size:14px;line-height:1.45}
+.encart li::before{content:counter(a,decimal-leading-zero);font-family:var(--f-mono);font-size:11px;color:var(--accent);padding-top:3px;font-variant-numeric:tabular-nums}
+.safety{background:var(--warn-bg);border-left:3px solid var(--accent);padding:8px 12px;font-size:13px;border-radius:0 4px 4px 0}
+.safety strong{font-family:var(--f-display);letter-spacing:.04em;font-size:14px;text-transform:uppercase;color:var(--accent)}
+.nav{display:flex;gap:8px;flex-wrap:wrap}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:4px;padding:9px 16px;font-weight:600}
+.primary:disabled,.ghost:disabled{opacity:.4;cursor:default}
+ol.steps{list-style:none;margin:0;padding:8px 0}
+ol.steps li button{display:grid;grid-template-columns:28px 1fr 18px;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:8px 18px;font-size:14px}
+ol.steps li button:hover{background:rgba(142,163,191,.1)}
+ol.steps .n{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+ol.steps li.on button{background:rgba(255,122,46,.12)}
+ol.steps li.on .n{color:var(--accent);font-weight:500}
+ol.steps .chk{font-size:13px;color:var(--ok);text-align:right}
+ol.steps li.quizrow .n{color:var(--accent)}
+.foot{padding:10px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);margin-top:auto}
+
+/* quiz */
+.q{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.choices{display:flex;flex-direction:column;gap:8px}
+.choice{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:10px 12px;font-size:14px}
+.choice:hover:not(:disabled){border-color:var(--muted)}
+.choice .k{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding-top:1px}
+.choice.good{border-color:var(--ok);background:rgba(76,195,138,.12)}
+.choice.bad{border-color:var(--err);background:rgba(255,107,107,.1)}
+.choice:disabled{cursor:default}
+.fb{font-size:14px;border-left:3px solid var(--ok);padding:6px 12px;background:var(--panel2);border-radius:0 4px 4px 0}
+.fb.no{border-color:var(--err)}
+.fb b{font-family:var(--f-display);font-size:16px;letter-spacing:.03em}
+.score{display:flex;align-items:baseline;gap:10px}
+.score b{font-family:var(--f-display);font-size:64px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.score span{color:var(--muted);font-family:var(--f-mono);font-size:13px}
+.dots{display:flex;gap:6px}
+.dots i{width:22px;height:4px;border-radius:2px;background:var(--line)}
+.dots i.g{background:var(--ok)}.dots i.b{background:var(--err)}.dots i.c{background:var(--accent)}
+
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;height:auto}
+  .stage{height:60vh;min-height:320px}
+  .sheet{overflow:visible}
+}
+@media (prefers-reduced-motion:reduce){.bar i,.label{transition:none}}
+</style>
+
+<div class="wrap">
+  <section class="stage" aria-label="Vue 3D de la pompe">
+    <canvas id="c"></canvas>
+    <div class="tag"><b>P-200</b><span>Pompe centrifuge monobloc · modèle de démonstration</span></div>
+    <div class="viewbtn">
+      <button class="ghost" id="tour">▶ Visite guidée</button>
+      <button class="ghost" id="reset">Recadrer</button>
+    </div>
+    <div class="label" id="label"><div class="pin" id="labelTxt"></div><div class="stem"></div><div class="dot"></div></div>
+    <div class="hint">Glisser pour tourner · molette pour zoomer · ← → pour les étapes</div>
+  </section>
+
+  <aside class="sheet">
+    <div class="head">
+      <span class="eyebrow" id="eyebrow">Fiche d'intervention · Démontage</span>
+      <h1>Remplacement de la garniture mécanique</h1>
+      <div class="bar"><i id="bar"></i></div>
+    </div>
+
+    <div id="procView">
+      <div class="cur" aria-live="polite">
+        <span class="num" id="num"></span>
+        <h2 id="title"></h2>
+        <p id="text"></p>
+        <dl class="meta">
+          <dt>Outils</dt><dd id="tools"></dd>
+          <dt>Durée</dt><dd id="time"></dd>
+        </dl>
+        <div class="encart">
+          <h3>Actions détaillées</h3>
+          <ol id="detail"></ol>
+        </div>
+        <div class="safety" id="safety" hidden><strong>Sécurité</strong><br><span id="safetyTxt"></span></div>
+        <div class="nav">
+          <button class="ghost" id="prev">← Précédent</button>
+          <button class="primary" id="next">Étape validée →</button>
+        </div>
+      </div>
+      <ol class="steps" id="steps"></ol>
+    </div>
+
+    <div id="quizView" hidden>
+      <div class="q" aria-live="polite" id="quizBody"></div>
+    </div>
+
+    <div class="foot">Exemple de démonstration sur une pompe fictive. Ne remplace pas la notice du constructeur.</div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const STEPS=[
+ {t:"Vue d'ensemble",x:"Pompe centrifuge entraînée par moteur électrique via un accouplement. Objectif : accéder à la garniture mécanique, située derrière la roue.",tools:"Aucun",time:"5 min",focus:"volute",label:"Corps de pompe",hi:[],cam:[5.5,3.6,6.5],
+  d:["Lire l'ordre de travail et la plaque signalétique de la pompe.","Préparer la garniture de rechange et le jeu de joints correspondant à la référence.","Baliser la zone d'intervention autour du groupe motopompe."]},
+ {t:"Consigner l'installation",x:"Couper l'alimentation, poser son cadenas personnel et vérifier l'absence de tension.",tools:"Cadenas, étiquette, VAT",time:"5 min",focus:"motor",label:"Moteur · sectionneur",hi:["motor"],safe:"Consignation électrique obligatoire. Un cadenas par intervenant.",cam:[-2,3,6],
+  d:["Prévenir le responsable d'exploitation de l'arrêt de la pompe.","Ouvrir le sectionneur du moteur.","Poser son cadenas personnel et l'étiquette de consignation.","Vérifier l'absence de tension au VAT, puis tenter un démarrage local : le moteur ne doit pas tourner.","Renseigner la fiche de consignation."]},
+ {t:"Isoler et vidanger",x:"Fermer les vannes d'aspiration et de refoulement, puis vidanger le corps de pompe.",tools:"Clé de 19, bac de rétention",time:"10 min",focus:"drain",label:"Bouchon de vidange",hi:["drain","suction","discharge"],safe:"Fluide potentiellement chaud ou sous pression. Lunettes et gants.",cam:[4,0.4,5],
+  d:["Fermer la vanne de refoulement, puis la vanne d'aspiration.","Cadenasser les vannes si la procédure du site l'exige.","Placer le bac de rétention sous le bouchon de vidange.","Ouvrir l'évent en partie haute, puis le bouchon de vidange.","Attendre la fin de l'écoulement et contrôler que le manomètre indique zéro."]},
+ {t:"Déposer le protège-accouplement",x:"Dévisser les fixations et soulever le carter de protection.",tools:"Clé de 13",time:"3 min",focus:"guard",label:"Protège-accouplement",hi:["guard"],cam:[1,3.5,5.5],
+  d:["Dévisser les deux vis de fixation du carter.","Soulever le carter verticalement sans forcer.","Ranger la visserie dans un bac identifié."]},
+ {t:"Écarter le moteur",x:"Désolidariser l'accouplement et reculer le moteur pour libérer l'espace de démontage.",tools:"Clé de 17, levier, marqueur",time:"10 min",focus:"motor",label:"Moteur reculé",hi:["motor","coupling"],cam:[-1,4,7],
+  d:["Repérer au marqueur la position des pieds du moteur pour faciliter le réalignement.","Retirer l'élément élastique de l'accouplement.","Desserrer les quatre vis de pied du moteur.","Reculer le moteur sur le socle et le décaler sur le côté."]},
+ {t:"Desserrer les vis du corps",x:"Retirer les huit vis qui relient le flasque arrière au corps. Le corps reste raccordé à la tuyauterie.",tools:"Clé de 17, marqueur",time:"8 min",focus:"bolts",label:"Vis du flasque",hi:["bolts"],cam:[3,2.5,5],
+  d:["Tracer un repère entre le flasque et le corps.","Desserrer les vis en croix, d'un quart de tour à chaque passage.","Retirer les huit vis et contrôler l'état des filetages."]},
+ {t:"Extraire l'ensemble rotatif",x:"Tirer vers l'arrière le palier, l'arbre, le flasque et la roue d'un seul bloc (démontage « back pull-out »).",tools:"Palan ou élingue",time:"10 min",focus:"bearing",label:"Ensemble rotatif",hi:["bearing","shaft","backplate","impeller","seal"],safe:"Ensemble d'environ 25 kg. Utiliser un moyen de levage.",cam:[1,3,7],
+  d:["Élinguer le support de palier.","Décoller le flasque à l'aide des vis d'extraction si le joint adhère.","Tirer l'ensemble dans l'axe, sans basculer, pour ne pas abîmer la roue.","Poser l'ensemble sur un établi propre.","Obturer l'ouverture du corps de pompe."]},
+ {t:"Déposer la roue",x:"Bloquer l'arbre, dévisser l'écrou de roue et extraire la roue.",tools:"Clé à sangle, extracteur",time:"10 min",focus:"impeller",label:"Roue (bronze)",hi:["impeller"],cam:[0,3,4.5],
+  d:["Bloquer l'arbre avec la clé à sangle.","Dévisser l'écrou de roue (vérifier le sens du filetage sur la notice).","Extraire la roue avec l'extracteur et récupérer la clavette.","Contrôler les aubes : érosion, traces de cavitation, fissures."]},
+ {t:"Accéder à la garniture",x:"La garniture mécanique est accessible sur l'arbre. Relever son état avant remplacement.",tools:"Chiffon propre, gants nitrile",time:"5 min",focus:"seal",label:"Garniture mécanique",hi:["seal"],cam:[-0.5,2,3.5],
+  d:["Retirer la partie tournante de la garniture.","Déposer le grain fixe logé dans le flasque.","Contrôler les faces de friction : rayures, fissures, traces de chauffe.","Noter les constats sur l'ordre de travail.","Remplacer la garniture complète, sans toucher les faces neuves avec les doigts."]}
+];
+
+const QUIZ=[
+ {q:"Quelle est la toute première action avant d'intervenir sur la pompe ?",c:["Vidanger le corps de pompe","Consigner électriquement le moteur","Déposer le protège-accouplement","Desserrer les vis du corps"],a:1,why:"Aucune action mécanique avant la consignation : sectionneur ouvert, cadenas posé, absence de tension vérifiée.",state:0,hi:["motor"],focus:"motor",label:"Moteur",cam:[-2,3,6]},
+ {q:"Avant d'ouvrir le bouchon de vidange, il faut :",c:["Démonter la roue","Ouvrir la vanne de refoulement","Fermer les vannes d'aspiration et de refoulement","Reculer le moteur"],a:2,why:"Sans isolement hydraulique, la tuyauterie continuerait d'alimenter le corps de pompe.",state:1,hi:["suction","discharge","drain"],focus:"drain",label:"Vidange",cam:[4,0.4,5]},
+ {q:"Pourquoi recule-t-on le moteur ?",c:["Pour vérifier son roulement","Pour libérer l'espace nécessaire à l'extraction de l'ensemble rotatif","Pour vidanger l'accouplement","Pour accéder au bouchon de vidange"],a:1,why:"L'ensemble rotatif sort par l'arrière, côté moteur : il faut de la place dans l'axe.",state:4,hi:["motor"],focus:"motor",label:"Moteur",cam:[-1,4,7]},
+ {q:"Dans un démontage « back pull-out », quelle pièce reste raccordée à la tuyauterie ?",c:["Le corps de pompe","Le palier","La roue","Le flasque arrière"],a:0,why:"C'est tout l'intérêt de ce montage : le corps reste en place, on ne touche pas aux brides.",state:6,hi:["volute","suction","discharge"],focus:"volute",label:"Corps de pompe",cam:[4,3,6]},
+ {q:"Comment manipuler la garniture mécanique neuve ?",c:["La graisser abondamment","La nettoyer au solvant puis à la main","Sans toucher les faces de friction avec les doigts","La monter à sec en la frappant au maillet"],a:2,why:"Les faces sont rodées au micron : une trace de doigt ou une poussière suffit à provoquer une fuite.",state:8,hi:["seal"],focus:"seal",label:"Garniture",cam:[-0.5,2,3.5]}
+];
+
+const $=id=>document.getElementById(id);
+const canvas=$("c"), stageEl=canvas.parentElement;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(38,1,0.1,100);
+camera.position.set(5.5,3.6,6.5);
+const controls=new THREE.OrbitControls(camera,canvas);
+controls.enableDamping=true;controls.minDistance=3;controls.maxDistance=14;controls.maxPolarAngle=Math.PI*0.49;
+controls.target.set(0.2,0.6,0);
+
+// environnement pour les reflets métalliques
+{const env=new THREE.Scene();
+ const room=new THREE.Mesh(new THREE.SphereGeometry(20,32,16),new THREE.MeshBasicMaterial({color:0x14315a,side:THREE.BackSide}));env.add(room);
+ const lamp=(x,y,z,w,h,c)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);env.add(m)};
+ lamp(0,12,0,14,6,0xffffff);lamp(10,4,6,6,8,0xcfe0ff);lamp(-10,3,-4,5,7,0x8fb4ff);lamp(0,-8,0,20,20,0x0a1729);
+ const pm=new THREE.PMREMGenerator(renderer);scene.environment=pm.fromScene(env,0.04).texture;}
+
+scene.add(new THREE.HemisphereLight(0xdfe9ff,0x0a1729,0.45));
+const sun=new THREE.DirectionalLight(0xffffff,1.6);sun.position.set(4,9,5);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-6,right:6,top:6,bottom:-6,near:1,far:25});sun.shadow.bias=-0.0005;sun.shadow.radius=4;scene.add(sun);
+const rim=new THREE.DirectionalLight(0x7fb0ff,0.8);rim.position.set(-6,3,-5);scene.add(rim);
+
+// ---------- textures procédurales ----------
+function tex(draw,rx=1,ry=1,srgb=true,size=512){const c=document.createElement("canvas");c.width=c.height=size;const g=c.getContext("2d");draw(g,size);
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);if(srgb)t.encoding=THREE.sRGBEncoding;t.anisotropy=8;return t}
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function speckle(g,s,n,light,dark,sz=1.6){for(let i=0;i<n;i++){g.fillStyle=Math.random()<.5?light:dark;const r=rnd(.4,sz);g.fillRect(Math.random()*s,Math.random()*s,r,r)}}
+function blotch(g,s,n,col,rmax){for(let i=0;i<n;i++){const x=Math.random()*s,y=Math.random()*s,r=rnd(rmax*.3,rmax);const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,col);gr.addColorStop(1,"rgba(0,0,0,0)");g.fillStyle=gr;g.fillRect(x-r,y-r,r*2,r*2)}}
+function streaks(g,s,n,light,dark){for(let i=0;i<n;i++){g.strokeStyle=Math.random()<.5?light:dark;g.lineWidth=rnd(.4,1.2);const y=Math.random()*s,x=Math.random()*s,l=rnd(s*.2,s*.9);g.beginPath();g.moveTo(x,y);g.lineTo(x+l,y+rnd(-1,1));g.stroke()}}
+
+const T={
+ iron:tex((g,s)=>{g.fillStyle="#4d5359";g.fillRect(0,0,s,s);blotch(g,s,60,"rgba(30,34,38,.35)",60);blotch(g,s,40,"rgba(120,128,136,.18)",50);speckle(g,s,45000,"rgba(150,158,166,.35)","rgba(15,18,22,.45)")},2,2),
+ ironB:tex((g,s)=>{g.fillStyle="#808080";g.fillRect(0,0,s,s);speckle(g,s,60000,"#b0b0b0","#404040",2)},2,2,false),
+ steel:tex((g,s)=>{g.fillStyle="#b8c0c8";g.fillRect(0,0,s,s);streaks(g,s,2500,"rgba(255,255,255,.18)","rgba(40,48,56,.18)")},1,1),
+ steelB:tex((g,s)=>{g.fillStyle="#808080";g.fillRect(0,0,s,s);streaks(g,s,2500,"#9a9a9a","#666")},1,1,false),
+ paint:tex((g,s)=>{g.fillStyle="#1f4f86";g.fillRect(0,0,s,s);blotch(g,s,30,"rgba(255,255,255,.04)",90);speckle(g,s,20000,"rgba(255,255,255,.05)","rgba(0,0,0,.08)",1);
+   blotch(g,s,6,"rgba(20,20,20,.25)",25)},1,1),
+ paintB:tex((g,s)=>{g.fillStyle="#808080";g.fillRect(0,0,s,s);speckle(g,s,20000,"#8a8a8a","#767676",1.2)},1,1,false),
+ bronze:tex((g,s)=>{g.fillStyle="#a8743a";g.fillRect(0,0,s,s);streaks(g,s,1200,"rgba(255,220,170,.15)","rgba(60,30,10,.18)");blotch(g,s,25,"rgba(70,110,80,.18)",40);speckle(g,s,15000,"rgba(255,210,150,.12)","rgba(50,25,5,.2)")},1,1),
+ guard:tex((g,s)=>{g.fillStyle="#f2b705";g.fillRect(0,0,s,s);g.save();g.translate(s/2,s/2);g.rotate(-Math.PI/4);g.fillStyle="#1c1c1c";for(let i=-s;i<s;i+=64)g.fillRect(i,-s,26,s*2);g.restore();
+   speckle(g,s,15000,"rgba(255,255,255,.08)","rgba(0,0,0,.15)",1.2);blotch(g,s,14,"rgba(60,40,20,.2)",30)},2,1),
+ base:tex((g,s)=>{g.fillStyle="#2a3038";g.fillRect(0,0,s,s);streaks(g,s,1500,"rgba(255,255,255,.06)","rgba(0,0,0,.2)");blotch(g,s,20,"rgba(90,60,30,.18)",50);speckle(g,s,25000,"rgba(255,255,255,.06)","rgba(0,0,0,.2)")},3,1),
+ rubber:tex((g,s)=>{g.fillStyle="#1d1d1d";g.fillRect(0,0,s,s);speckle(g,s,25000,"#2a2a2a","#111",1.2)},1,1),
+ seal:tex((g,s)=>{g.fillStyle="#2a9d8f";g.fillRect(0,0,s,s);streaks(g,s,800,"rgba(255,255,255,.15)","rgba(0,0,0,.15)")},1,1)
+};
+const M=(map,bump,metal,rough,bs=0.02)=>new THREE.MeshStandardMaterial({map,bumpMap:bump||null,bumpScale:bs,metalness:metal,roughness:rough,envMapIntensity:1});
+const matMotor=M(T.paint,T.paintB,0.35,0.42,0.008),matIron=M(T.iron,T.ironB,0.55,0.72,0.03),matSteel=M(T.steel,T.steelB,0.95,0.28,0.006),
+      matBronze=M(T.bronze,T.steelB,0.9,0.35,0.01),matGuard=M(T.guard,T.paintB,0.2,0.55,0.008),matBase=M(T.base,T.ironB,0.6,0.6,0.02),
+      matSeal=M(T.seal,null,0.4,0.3),matRubber=M(T.rubber,null,0,0.9);
+
+const parts={};
+function part(name){const g=new THREE.Group();scene.add(g);parts[name]=g;return g}
+function cyl(r1,r2,h,mat,seg=48){const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,seg),mat);m.rotation.z=Math.PI/2;return m}
+function box(w,h,d,mat){return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat)}
+
+// sol
+const base=box(7.2,0.18,1.9,matBase);base.position.set(-0.3,-0.55,0);base.receiveShadow=true;base.castShadow=true;scene.add(base);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.ShadowMaterial({opacity:.45}));ground.rotation.x=-Math.PI/2;ground.position.y=-0.64;ground.receiveShadow=true;scene.add(ground);
+const grid=new THREE.GridHelper(18,36,0x3a6aa8,0x1d3a62);grid.position.y=-0.639;grid.material.transparent=true;grid.material.opacity=.55;scene.add(grid);
+
+// moteur
+{const g=part("motor");
+ const body=cyl(0.62,0.62,2.1,matMotor);body.position.x=-2.55;g.add(body);
+ for(let i=0;i<14;i++){const f=cyl(0.68,0.68,0.045,matMotor);f.position.x=-3.45+i*0.13;g.add(f)}
+ const cap=cyl(0.5,0.62,0.25,matMotor);cap.position.x=-3.72;g.add(cap);
+ const tb=box(0.5,0.3,0.45,matMotor);tb.position.set(-2.4,0.72,0);g.add(tb);
+ const plate=box(0.36,0.02,0.22,matSteel);plate.position.set(-2.4,0.875,0);g.add(plate);
+ const ft=box(1.6,0.2,1.3,matMotor);ft.position.set(-2.55,-0.5,0);g.add(ft);
+ for(const z of[-.5,.5])for(const x of[-3.2,-1.9]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.08,6),matSteel);b.position.set(x,-.36,z);g.add(b)}
+ const sh=cyl(0.09,0.09,0.4,matSteel);sh.position.x=-1.32;g.add(sh)}
+// accouplement
+{const g=part("coupling");const a=cyl(0.24,0.24,0.22,matSteel);a.position.x=-1.08;g.add(a);const b=cyl(0.24,0.24,0.22,matSteel);b.position.x=-0.8;g.add(b);
+ const e=cyl(0.2,0.2,0.08,matRubber);e.position.x=-0.94;g.add(e)}
+// protège-accouplement
+{const g=part("guard");const m=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.9,40,1,true,0,Math.PI),matGuard);
+ matGuard.side=THREE.DoubleSide;m.rotation.z=Math.PI/2;m.position.x=-0.94;g.add(m)}
+// palier
+{const g=part("bearing");const b=cyl(0.38,0.38,1.3,matIron);b.position.x=-0.05;g.add(b);
+ const ft=box(0.9,0.42,0.9,matIron);ft.position.set(-0.05,-0.42,0);g.add(ft);
+ const r=cyl(0.45,0.45,0.1,matIron);r.position.x=0.6;g.add(r);const r2=cyl(0.42,0.42,0.08,matIron);r2.position.x=-0.7;g.add(r2)}
+// arbre
+{const g=part("shaft");const s=cyl(0.09,0.09,2.4,matSteel);s.position.x=0.3;g.add(s)}
+// garniture
+{const g=part("seal");const s=cyl(0.2,0.2,0.18,matSeal);s.position.x=0.95;g.add(s);const s2=cyl(0.16,0.16,0.1,matSteel);s2.position.x=1.08;g.add(s2);
+ const sp=new THREE.Mesh(new THREE.TorusGeometry(0.15,0.025,8,24),matSteel);sp.rotation.y=Math.PI/2;sp.position.x=0.85;g.add(sp)}
+// flasque arrière
+{const g=part("backplate");const p=cyl(1.08,1.08,0.12,matIron);p.position.x=1.2;g.add(p)}
+// roue
+{const g=part("impeller");const hub=cyl(0.2,0.25,0.25,matBronze);hub.position.x=1.42;g.add(hub);
+ const disc=cyl(0.85,0.85,0.05,matBronze);disc.position.x=1.32;g.add(disc);
+ for(let i=0;i<6;i++){const v=box(0.18,0.62,0.05,matBronze);const a=i*Math.PI/3;
+  v.position.set(1.43,Math.cos(a)*0.48,Math.sin(a)*0.48);v.rotation.x=-a+0.35;g.add(v)}
+ const ey=new THREE.Mesh(new THREE.RingGeometry(0.3,0.85,48),matBronze);ey.rotation.y=Math.PI/2;ey.position.x=1.55;matBronze.side=THREE.DoubleSide;g.add(ey)}
+// vis
+{const g=part("bolts");for(let i=0;i<8;i++){const a=i*Math.PI/4+Math.PI/8;const b=cyl(0.06,0.06,0.42,matSteel,12);b.position.set(1.32,Math.cos(a)*1.0,Math.sin(a)*1.0);g.add(b);
+ const h=cyl(0.1,0.1,0.08,matSteel,6);h.position.set(1.14,Math.cos(a)*1.0,Math.sin(a)*1.0);g.add(h)}}
+// corps
+{const g=part("volute");const v=cyl(1.05,1.05,0.62,matIron);v.position.x=1.6;g.add(v);
+ const sp=new THREE.Mesh(new THREE.TorusGeometry(1.0,0.16,16,48,Math.PI*1.2),matIron);sp.rotation.y=Math.PI/2;sp.position.x=1.6;g.add(sp);
+ const fl=cyl(1.12,1.12,0.1,matIron);fl.position.x=1.32;g.add(fl);
+ const ft=box(0.8,0.5,1.1,matIron);ft.position.set(1.6,-0.5,0);g.add(ft)}
+{const g=part("suction");const n=cyl(0.38,0.38,0.7,matIron);n.position.x=2.25;g.add(n);const f=cyl(0.58,0.58,0.1,matIron);f.position.x=2.6;g.add(f)}
+{const g=part("discharge");const n=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.7,40),matIron);n.position.set(1.6,1.25,0.55);g.add(n);
+ const f=new THREE.Mesh(new THREE.CylinderGeometry(0.48,0.48,0.08,40),matIron);f.position.set(1.6,1.6,0.55);g.add(f)}
+{const g=part("drain");const d=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.2,6),matSteel);d.position.set(1.95,-0.82,0.45);g.add(d)}
+
+// matériau propre à chaque maillage (surbrillance indépendante) + ombres
+for(const n in parts)parts[n].traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.castShadow=true;o.receiveShadow=true}});
+
+const MOVES={
+ guard:{3:[0,1.6,0]},
+ motor:{4:[-1.3,0,0],6:[0,0,1.9]},
+ coupling:{4:[-0.65,0,0],6:[0,0,1.9]},
+ bolts:{5:[0.9,0,0]},
+ bearing:{6:[-1.7,0.35,0]}, shaft:{6:[-1.7,0.35,0]}, seal:{6:[-1.7,0.35,0]}, backplate:{6:[-1.7,0.35,0]},
+ impeller:{6:[-1.7,0.35,0],7:[0.9,0.9,0]},
+ drain:{2:[0,-0.25,0]}
+};
+const ANCHOR={volute:[1.6,1.1,0],motor:[-2.5,0.9,0],drain:[1.95,-0.8,0.45],guard:[-0.94,0.5,0],bolts:[1.2,1.05,0.3],bearing:[-0.05,0.45,0],impeller:[1.42,0.9,0],seal:[0.95,0.25,0]};
+function target(name,st){const v=new THREE.Vector3();const m=MOVES[name];if(m)for(const k in m)if(+k<=st)v.add(new THREE.Vector3(...m[k]));return v}
+function anchorPos(name){const a=new THREE.Vector3(...(ANCHOR[name]||[0,0,0]));if(parts[name])a.add(parts[name].position);return a}
+
+// ---------- état de scène ----------
+let lastCam=[5.5,3.6,6.5],sceneState=0,highlight=new Set(),focus="volute",flying=true;
+const camGoal=new THREE.Vector3(5.5,3.6,6.5),tgtGoal=new THREE.Vector3(0.2,0.6,0);
+function applyScene(st,hi,f,label,cam){sceneState=st;highlight=new Set(hi);focus=f;$("labelTxt").textContent=label;
+ lastCam=cam;camGoal.set(...cam);tgtGoal.set(...(ANCHOR[f]||[0,0,0])).add(target(f,st)).lerp(new THREE.Vector3(0.2,0.4,0),0.35);flying=true}
+
+// ---------- procédure ----------
+let step=0;
+const LAST=STEPS.length-1;
+function setStep(i){
+  showProc();
+  step=Math.max(0,Math.min(LAST,i));const s=STEPS[step];
+  $("num").textContent=`Étape ${String(step).padStart(2,"0")} / ${String(LAST).padStart(2,"0")}`;
+  $("title").textContent=s.t;$("text").textContent=s.x;$("tools").textContent=s.tools;$("time").textContent=s.time;
+  $("detail").innerHTML=s.d.map(a=>`<li><span>${a}</span></li>`).join("");
+  $("safety").hidden=!s.safe;$("safetyTxt").textContent=s.safe||"";
+  $("bar").style.width=(step/LAST*100)+"%";
+  $("prev").disabled=step===0;
+  $("next").textContent=step===LAST?"Passer au quiz →":(step===0?"Commencer →":"Étape validée →");
+  document.querySelectorAll("#steps li[data-k]").forEach(li=>{const k=+li.dataset.k;li.classList.toggle("on",k===step);li.querySelector(".chk").textContent=k<step?"✓":""});
+  applyScene(step,s.hi,s.focus,s.label,s.cam);
+}
+STEPS.forEach((s,k)=>{const li=document.createElement("li");li.dataset.k=k;li.innerHTML=`<button type="button"><span class="n">${String(k).padStart(2,"0")}</span><span>${s.t}</span><span class="chk"></span></button>`;
+ li.querySelector("button").onclick=()=>{stopTour();setStep(k)};$("steps").appendChild(li)});
+{const li=document.createElement("li");li.className="quizrow";li.innerHTML=`<button type="button"><span class="n">?</span><span>Quiz de validation</span><span class="chk"></span></button>`;
+ li.querySelector("button").onclick=()=>{stopTour();startQuiz()};$("steps").appendChild(li)}
+$("next").onclick=()=>{stopTour();step===LAST?startQuiz():setStep(step+1)};
+$("prev").onclick=()=>{stopTour();setStep(step-1)};
+$("reset").onclick=()=>{camGoal.set(...lastCam);flying=true};
+addEventListener("keydown",e=>{if(!$("procView").hidden){if(e.key==="ArrowRight"){stopTour();setStep(step+1)}if(e.key==="ArrowLeft"){stopTour();setStep(step-1)}}});
+let tourT=null;
+function stopTour(){if(tourT){clearInterval(tourT);tourT=null;$("tour").textContent="▶ Visite guidée"}}
+$("tour").onclick=()=>{if(tourT)return stopTour();setStep(0);$("tour").textContent="❚❚ Pause";tourT=setInterval(()=>{if(step>=LAST)return stopTour();setStep(step+1)},5000)};
+controls.addEventListener("start",()=>{flying=false});
+
+function showProc(){$("procView").hidden=false;$("quizView").hidden=true;$("eyebrow").textContent="Fiche d'intervention · Démontage"}
+
+// ---------- quiz ----------
+let qi=0,answers=[];
+function startQuiz(){qi=0;answers=[];$("procView").hidden=true;$("quizView").hidden=false;$("eyebrow").textContent="Quiz de validation · 5 questions";renderQ()}
+function dots(){return `<div class="dots">${QUIZ.map((_,k)=>`<i class="${answers[k]===undefined?(k===qi?"c":""):(answers[k]?"g":"b")}"></i>`).join("")}</div>`}
+function renderQ(){
+  const q=QUIZ[qi];$("bar").style.width=(qi/QUIZ.length*100)+"%";
+  applyScene(q.state,q.hi,q.focus,q.label,q.cam);
+  $("quizBody").innerHTML=`${dots()}<span class="num" style="font-family:var(--f-mono);font-size:12px;color:var(--accent)">Question ${qi+1} / ${QUIZ.length}</span>
+   <h2 style="font-family:var(--f-display);font-size:25px;font-weight:600;margin:0;line-height:1.15;text-wrap:balance">${q.q}</h2>
+   <div class="choices">${q.c.map((c,k)=>`<button class="choice" type="button" data-k="${k}"><span class="k">${"ABCD"[k]}</span><span>${c}</span></button>`).join("")}</div>
+   <div id="fbBox"></div>`;
+  $("quizBody").querySelectorAll(".choice").forEach(b=>b.onclick=()=>answer(+b.dataset.k));
+}
+function answer(k){
+  const q=QUIZ[qi],ok=k===q.a;answers[qi]=ok;
+  $("quizBody").querySelectorAll(".choice").forEach(b=>{const j=+b.dataset.k;b.disabled=true;if(j===q.a)b.classList.add("good");else if(j===k)b.classList.add("bad")});
+  $("quizBody").querySelector(".dots").outerHTML=dots();
+  $("fbBox").innerHTML=`<div class="fb ${ok?"":"no"}"><b>${ok?"Correct.":"Pas tout à fait."}</b><br>${q.why}</div>
+   <div class="nav" style="margin-top:12px"><button class="primary" id="qNext" type="button">${qi===QUIZ.length-1?"Voir le résultat →":"Question suivante →"}</button></div>`;
+  $("qNext").onclick=()=>{qi++;qi<QUIZ.length?renderQ():result()};$("qNext").focus();
+}
+function result(){
+  const n=answers.filter(Boolean).length;$("bar").style.width="100%";
+  const msg=n===QUIZ.length?"Procédure maîtrisée. Le stagiaire peut passer à la mise en situation encadrée.":n>=3?"Bases acquises. Revoir les étapes manquées avant la mise en situation.":"À retravailler. Reprendre la procédure pas à pas avec le formateur.";
+  applyScene(8,[],"volute","Démontage terminé",[5,3.4,6.5]);
+  $("quizBody").innerHTML=`${dots()}<div class="score"><b>${n}/${QUIZ.length}</b><span>bonnes réponses</span></div>
+   <p style="margin:0">${msg}</p>
+   <div class="nav"><button class="primary" id="qAgain" type="button">Refaire le quiz</button><button class="ghost" id="qBack" type="button">Revoir la procédure</button></div>`;
+  $("qAgain").onclick=startQuiz;$("qBack").onclick=()=>setStep(0);
+}
+
+// ---------- rendu ----------
+function resize(){const w=stageEl.clientWidth,h=stageEl.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(stageEl);resize();
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clock=new THREE.Clock(),tmp=new THREE.Vector3(),acc=new THREE.Color("#ff7a2e");
+function loop(){
+  const dt=Math.min(clock.getDelta(),0.05),k=reduce?1:1-Math.pow(0.002,dt),t=clock.elapsedTime;
+  for(const n in parts){const p=parts[n];p.position.lerp(target(n,sceneState),k);
+    const pulse=highlight.has(n)?0.32+0.22*Math.sin(t*4):0;
+    p.traverse(o=>{if(o.isMesh){o.material.emissive.copy(acc);o.material.emissiveIntensity=pulse}})}
+  if(flying){camera.position.lerp(camGoal,k*0.8);controls.target.lerp(tgtGoal,k*0.8);if(camera.position.distanceTo(camGoal)<0.02)flying=false}
+  controls.update();renderer.render(scene,camera);
+  tmp.copy(anchorPos(focus)).project(camera);
+  const lab=$("label");lab.style.left=((tmp.x+1)/2*stageEl.clientWidth)+"px";lab.style.top=((1-tmp.y)/2*stageEl.clientHeight)+"px";lab.style.opacity=tmp.z<1?1:0;
+  requestAnimationFrame(loop)}
+setStep(0);loop();
+</script>
